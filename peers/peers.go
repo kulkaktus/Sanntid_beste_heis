@@ -17,6 +17,10 @@ type PeerUpdate struct {
 const interval = 15 * time.Millisecond
 const timeout = 50 * time.Millisecond
 
+func Peers_init() error {
+	return nil
+}
+
 func Transmitter(port int, id string, transmitEnable <-chan bool) {
 
 	conn := conn.DialBroadcastUDP(port)

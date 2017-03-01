@@ -3,13 +3,10 @@ package network
 import (
 	"./../bcast"
 	"./../conn"
-	"./../localip"
+	//"./../localip"
 	"./../peers"
-	"flag"
 	"fmt"
 	"net"
-	"os"
-	"runtime"
 	"sort"
 	"time"
 )
@@ -38,24 +35,7 @@ const timeout = 50 * time.Millisecond
 var PeerUpdateCh chan peers.PeerUpdate
 
 //returns transmit, receive channels
-func Init() (chan<- Message, <-chan Message, string) {
-	runtime.GOMAXPROCS(4)
-
-	var id string
-	flag.StringVar(&id, "id", "", "id of this peer")
-	flag.Parse()
-
-	// ... or alternatively, we can use the local IP address.
-	// (But since we can run multiple programs on the same PC, we also append the
-	//  process ID)
-	if id == "" {
-		localIP, err := localip.LocalIP()
-		if err != nil {
-			fmt.Println(err)
-			localIP = "DISCONNECTED"
-		}
-		id = fmt.Sprintf("peer-%s-%d", localIP, os.Getpid())
-	}
+func Init() (chan<- Message, <-chan Message) {
 
 	// We make a channel for receiving updates on the id's of the peers that are
 	//  alive on the network
@@ -63,7 +43,7 @@ func Init() (chan<- Message, <-chan Message, string) {
 	// We can disable/enable the transmitter after it has been started.
 	// This could be used to signal that we are somehow "unavailable".
 	peerTxEnable := make(chan bool)
-	go peers.Transmitter(15647, id, peerTxEnable)
+	go peers.Transmitter(15647, "0", peerTxEnable)
 	go peers.Receiver(15647, PeerUpdateCh)
 
 	// We make channels for sending and receiving our custom data types
@@ -75,7 +55,7 @@ func Init() (chan<- Message, <-chan Message, string) {
 	go bcast.Transmitter(16569, helloTx)
 	go bcast.Receiver(16569, helloRx)
 
-	return helloTx, helloRx, id
+	return helloTx, helloRx
 	// The example message. We just send one of these every second.
 
 }
