@@ -1,10 +1,15 @@
 package main
 
 import (
-	"fmt"
-
+	"./config"
+	"./io/buttons"
+	"./io/elevio"
+	"./io/lights"
+	"./io/sensors"
 	"./network"
 	"./peers"
+	"fmt"
+	"os"
 	"time"
 )
 
@@ -13,8 +18,43 @@ import (
 //  will be received as zero-values.
 
 func main() {
-
-	tx, rx, id := network.Init() //get transmit and receive channels
+	lights.Lights_init()
+	peers.Peers_init()
+	config.Config_init()
+	buttons.Buttons_init()
+	sensors.Sensors_init()
+	elevio.Io_init()
+	//floor := 0
+	var id string
+	if len(os.Args) <= 1 {
+		fmt.Println("Enter id: ")
+		for id == "" {
+			fmt.Scanln(&id)
+		}
+	} else {
+		id = os.Args[1]
+	}
+	if id == "" {
+		fmt.Printf("error, no id\n")
+	} else {
+		fmt.Print("My id is: ", id, "\n")
+	}
+	/*for {
+		for j := 1; j <= config.DOWN; j++ {
+			for i := 1; i <= 4; i++ {
+				if buttons.Get(j, i) {
+					lights.Set(j, i)
+				} else {
+					lights.Clear(j, i)
+				}
+			}
+		}
+		if floor != sensors.Get() && sensors.Get() != 0 {
+			floor = sensors.Get()
+			fmt.Printf("Arrived at %d \n", floor)
+		}
+	}*/
+	tx, rx := network.Init() //get transmit and receive channels
 	// The example message. We just send one of these every second.
 	go func() {
 		helloMsg := network.Message{"Hello!", id, 0}

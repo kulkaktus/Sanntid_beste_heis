@@ -1,29 +1,30 @@
 package elevio
 
 /*
-#cgo LDFLAGS: -lio
-#include <io.h>
+#cgo CFLAGS: -std=gnu11 -g
+#cgo LDFLAGS: -lcomedi -lm
+#include </home/student/Documents/heyword/heis/heis2/io/elevio/io.h>
 */
 import (
 	"C"
 )
 
-func init() bool {
+func Io_init() bool {
 	return (int(C.io_init()) != 0)
 }
 
-func set_bit(channel int) {
+func Set_bit(channel int) {
 	C.io_set_bit(C.int(channel))
 }
 
-func clear_bit(int channel) {
+func Clear_bit(channel int) {
 	C.io_clear_bit(C.int(channel))
 }
 
-func read_bit(int channel) int {
+func Get_bit(channel int) bool {
 	return (C.io_read_bit(C.int(channel)) != 0)
 }
 
-func write_analog(int channel, int value) {
+func Write_analog(channel int, value int) {
 	C.io_write_analog(C.int(channel), C.int(value))
 }
