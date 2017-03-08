@@ -12,11 +12,11 @@ func Down_button(floor int) int {
 	return [...]int{0, 0x200, 0x202, 0x203}[floor-1]
 }
 
-func Inside_button(floor int) int {
+func Internal_button(floor int) int {
 	return [...]int{0x315, 0x314, 0x313, 0x312}[floor-1]
 }
 
-func Inside_light(floor int) int {
+func Internal_light(floor int) int {
 	return [...]int{0x30D, 0x30C, 0x30B, 0x30A}[floor-1]
 }
 

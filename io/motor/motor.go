@@ -14,10 +14,11 @@ func Motor_init(){
 func Go(direction int) {
 	if(direction == config.UP){
 		io.Set_bit(channels.Motor_dir)
+		io.Write_analog(channels.Motor_value, config.Motor_speed)
 	}else if(direction == config.DOWN){
 		io.Clear_bit(channels.Motor_dir)
+		io.Write_analog(channels.Motor_value, config.Motor_speed)
 	}
-	io.Write_analog(channels.Motor_value, config.Motor_speed)
 }
 
 func Stop(){

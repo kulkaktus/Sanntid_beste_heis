@@ -11,9 +11,9 @@ func Buttons_init() error {
 }
 
 func Get(type_ int, floor int) bool {
-	if type_ == config.INSIDE {
+	if type_ == config.INTERNAL {
 		if floor > 0 && floor <= config.NUMFLOORS {
-			return io.Get_bit(channels.Inside_button(floor))
+			return io.Get_bit(channels.Internal_button(floor))
 		} else {
 			return false
 		}

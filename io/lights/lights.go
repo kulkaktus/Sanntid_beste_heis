@@ -11,9 +11,9 @@ func Lights_init() error {
 }
 
 func Set(type_ int, floor int) error {
-	if type_ == config.INSIDE {
+	if type_ == config.INTERNAL {
 		if floor > 0 && floor <= config.NUMFLOORS {
-			io.Set_bit(channels.Inside_light(floor))
+			io.Set_bit(channels.Internal_light(floor))
 		} else {
 			return nil
 		}
@@ -51,9 +51,9 @@ func Set(type_ int, floor int) error {
 }
 
 func Clear(type_ int, floor int) error {
-	if type_ == config.INSIDE {
+	if type_ == config.INTERNAL {
 		if floor > 0 && floor <= config.NUMFLOORS {
-			io.Clear_bit(channels.Inside_light(floor))
+			io.Clear_bit(channels.Internal_light(floor))
 		} else {
 			return nil
 		}
