@@ -2,13 +2,8 @@ package main
 
 import (
 	"fmt"
+	"config"
 )
-
-const Num_floors = 4
-const Num_elevators = 3
-
-//const Ext_order_list_size = 2 * Num_floors * Num_elevators
-//const Int_order_list_size = Num_elevators
 
 const (
 	Internal = iota
@@ -35,10 +30,10 @@ var direction int
 func main() {
 
 	for i := 0; i < 10; i++ {
-		_ = Order_insert(Order{i, Up, -1})
+		_ = Order_insert(Order{i, config.UP, -1})
 
 	}
-	
+
 
 	for i, v := range external_order_list {
 		fmt.Printf("Order %d \t Floor: %d \t Button_type: %d\n",
@@ -52,7 +47,7 @@ func Order_init() {
 }
 
 func Order_insert(order Order) bool {
-	if order.Button_type == Internal {
+	if order.Button_type == config.INSIDE {
 		order_list := internal_order_list[:]
 
 		if Order_already_exists(order_list, order) {
@@ -61,7 +56,7 @@ func Order_insert(order Order) bool {
 			internal_order_list = append(order_list, order)
 			return true
 		}
-	} else if order.Button_type == Up || order.Button_type == Down {
+	} else if order.Button_type == config.UP || order.Button_type == config.DOWN {
 		order_list := external_order_list[:]
 
 		if Order_already_exists(order_list, order) {
@@ -87,16 +82,16 @@ func Order_assign_elevator() {
 func Order_get_next() next_order Order {
 
 	next_order := Order{0,0, no_executor}
-	temp := Order{1000, Up, no_executor}
+	temp := Order{1000, config.UP, no_executor}
 	
 
-	if (current_floor == Num_floors){
+	if (current_floor == config.NUMFLOORS){
 
 	}
 
-	if (direction == Up) {
+	if (direction == config.UP) {
 
-		for i := last_floor + 1; i < Num_floors; i++ { //will not go out of bounds here, since direction == down if at top floor, see Order_new_floor_reached
+		for i := last_floor + 1; i < config.NUMFLOORS; i++ { //will not go out of bounds here, since direction == down if at top floor, see Order_new_floor_reached
 
 			for j, order := range internal_order_list{
 				if order.Floor == i {
@@ -106,7 +101,7 @@ func Order_get_next() next_order Order {
 
 			for k, order := range external_order_list{
 				if order.Executor == self{
-					if order.Button_type == Up {
+					if order.Button_type == config.UP {
 						return order
 					}
 				}
@@ -122,10 +117,11 @@ func Order_get_next() next_order Order {
 func Order_new_floor_reached(floor int) {
 	last_floor = floor
 	if floor == 0 {
-		direction = Up
+		direction = config.UP
 	}
-	else if floor == Num_floors{
-		direction = Down
+	else if floor == config.NUMFLOORS{
+		direction = config.DOWN 
+
 	}
 }
 
