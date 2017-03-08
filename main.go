@@ -74,6 +74,12 @@ func main() {
 						lights.Set(j, i)
 						motor.Go(j)
 						state = "running"
+						go func (){
+							order := order_handling.Order{floor, button_type, ''}
+							if(order_handling.Insert(order)){
+								network.Send_order(order_handling.Get_cost(order),order,tx)
+							}
+						}
 					} else {
 						lights.Clear(j, i)
 					}

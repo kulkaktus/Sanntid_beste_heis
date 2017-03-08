@@ -5,6 +5,7 @@ import (
 	"./../conn"
 	//"./../localip"
 	"./../peers"
+	"./../order_handling"
 	"fmt"
 	"net"
 	"sort"
@@ -129,9 +130,14 @@ func Receiver(port int, peerUpdateChannel chan<- peers.PeerUpdate) {
 	}
 }
 
-func SendMessage(message Message, recipient_ip string) {
+func SendMessage(message Message, recipient_id string) {
 
 }
+
+func Send_order(cost int, order order_handling.Order, tx chan, {
+	
+}
+
 
 /*
 
