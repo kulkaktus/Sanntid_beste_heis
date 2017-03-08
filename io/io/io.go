@@ -1,9 +1,9 @@
-package elevio
+package io
 
 /*
 #cgo CFLAGS: -std=gnu11 -g
 #cgo LDFLAGS: -lcomedi -lm
-#include </home/student/Documents/heyword/heis/heis2/io/elevio/io.h>
+#include "io.h"
 */
 import (
 	"C"

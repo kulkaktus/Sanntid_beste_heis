@@ -3,10 +3,9 @@ package main
 import (
 	"./config"
 	"./io/buttons"
-	"./io/io"
+	"./io/elevio"
 	"./io/lights"
 	"./io/sensors"
-	"./io/motor"
 	"./network"
 	"./peers"
 	"fmt"
@@ -24,8 +23,8 @@ func main() {
 	config.Config_init()
 	buttons.Buttons_init()
 	sensors.Sensors_init()
-	io.Io_init()
-	floor := 0
+	elevio.Io_init()
+	//floor := 0
 	var id string
 	if len(os.Args) <= 1 {
 		fmt.Println("Enter id: ")
@@ -40,24 +39,21 @@ func main() {
 	} else {
 		fmt.Print("My id is: ", id, "\n")
 	}
-	for {
+	/*for {
 		for j := 1; j <= config.DOWN; j++ {
 			for i := 1; i <= 4; i++ {
 				if buttons.Get(j, i) {
 					lights.Set(j, i)
-					motor.Go(j)
 				} else {
 					lights.Clear(j, i)
 				}
 			}
 		}
 		if floor != sensors.Get() && sensors.Get() != 0 {
-			motor.Stop()
 			floor = sensors.Get()
-			lights.Set(config.INDICATE,floor)
 			fmt.Printf("Arrived at %d \n", floor)
 		}
-	}
+	}*/
 	tx, rx := network.Init() //get transmit and receive channels
 	// The example message. We just send one of these every second.
 	go func() {

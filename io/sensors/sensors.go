@@ -3,7 +3,7 @@ package sensors
 import (
 	"./../../config"
 	"./../channels"
-	"./../elevio"
+	"./../io"
 )
 
 func Sensors_init() error {
@@ -13,7 +13,7 @@ func Sensors_init() error {
 func Get() int {
 	floor := 0
 	for floor = config.NUMFLOORS; floor >= 1; floor-- {
-		if elevio.Get_bit(channels.Sensor(floor)) {
+		if io.Get_bit(channels.Sensor(floor)) {
 			break
 		}
 	}

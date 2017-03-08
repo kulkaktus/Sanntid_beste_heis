@@ -17,6 +17,10 @@ const (
 	NUMELEVATORS = 3
 )
 
+const (
+	Motor_speed = 2800
+)
+
 func Config_init() error {
 	runtime.GOMAXPROCS(4)
 	return nil

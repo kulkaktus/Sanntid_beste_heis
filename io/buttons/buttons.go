@@ -3,7 +3,7 @@ package buttons
 import (
 	"./../../config"
 	"./../channels"
-	"./../elevio"
+	"./../io"
 )
 
 func Buttons_init() error {
@@ -13,19 +13,19 @@ func Buttons_init() error {
 func Get(type_ int, floor int) bool {
 	if type_ == config.INSIDE {
 		if floor > 0 && floor <= config.NUMFLOORS {
-			return elevio.Get_bit(channels.Inside_button(floor))
+			return io.Get_bit(channels.Inside_button(floor))
 		} else {
 			return false
 		}
 	} else if type_ == config.UP {
 		if floor > 0 && floor <= config.NUMFLOORS {
-			return elevio.Get_bit(channels.Up_button(floor))
+			return io.Get_bit(channels.Up_button(floor))
 		} else {
 			return false
 		}
 	} else if type_ == config.DOWN {
 		if floor > 0 && floor <= config.NUMFLOORS {
-			return elevio.Get_bit(channels.Down_button(floor))
+			return io.Get_bit(channels.Down_button(floor))
 		} else {
 			return false
 		}
