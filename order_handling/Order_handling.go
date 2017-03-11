@@ -56,17 +56,13 @@ func Insert(order Order) bool {
 	}
 }
 
-func Get_cost(order Order) int {
+func Get_cost(order Order, state string) int {
 
 	order_cost := 0
-	order_cost += int(math.Abs(float64(last_floor-order.Destination))) * config.DISTANCE_COST
-
-	if order.Button_type != last_direction {
-		order_cost += config.OPPOSITE_DIRECTION_COST
-	}
+	distance := int(math.Abs(float64(last_floor-order.Destination)))
+	order_cost += config.DISTANCE_COST * distance
 
 	stops_inbetween := 0
-
 	if last_floor < order.Destination {
 
 		for _, v := range external_order_list {
@@ -91,8 +87,38 @@ func Get_cost(order Order) int {
 		}
 
 	}
+	order_cost += config.STOPS_INBETWEEN_COST * stops_inbetween
 
-	order_cost += stops_inbetween * config.STOPS_INBETWEEN_COST
+
+	direction_changes := 0
+
+	if (state == "idle") && (order.Destination == last_floor){
+		if (order.Button_type == config.INTERNAL) || (order.Button_type == last_direction){
+			return 0
+		} else{
+			direction_changes += 1	
+		}
+	} else {
+		if last_direction == config.UP {
+			if order.Button_type == config.INTERNAL  {
+				if order.Destination < last_floor {
+					direction_changes += 1
+				}
+
+			} else {
+			
+				//Checking orders in order of priority
+				for i := last_floor + 1; i <= config.NUMFLOORS - 1; i++ { 
+					if (order.Destination > last_floor) && (order.Button_type == config.UP)
+				
+
+				}
+			
+			}
+		}
+	}
+
+	
 
 	return order_cost
 }
@@ -101,38 +127,23 @@ func Assign_elevator() {
 
 }
 
-func Get_next() (next_order Order) {
+func Get_next(state string) (next_order Order) {
 
-	next_order = Order{0, 0, no_executer}
-	//temp := Order{1000, config.UP, no_executer}
+	temp_lowest_cost = 1000
 
-	if last_floor == config.NUMFLOORS {
-
+	for _, ext_order_i := range external_order_list {
+		if Get_cost(ext_order_i, state) < temp_lowest_cost {
+			next_order = ext_order_i
+		}
 	}
 
-	if last_direction == config.UP {
-
-		for i := last_floor + 1; i < config.NUMFLOORS; i++ { //will not go out of bounds here, since direction == down if at top floor, see Order_new_floor_reached
-
-			for _, order := range internal_order_list {
-				if order.Destination == i {
-					return order
-				}
-			}
-
-			for _, order := range external_order_list {
-				if order.Executer == self {
-					if order.Button_type == config.UP {
-						return order
-					}
-				}
-			}
-
+	for _, int_order_i := range internal_order_list {
+		if Get_cost(int_order_i, state) < temp_lowest_cost {
+			next_order = int_order_i
 		}
 	}
 
 	return next_order
-
 }
 
 func New_floor_reached(floor int) {
