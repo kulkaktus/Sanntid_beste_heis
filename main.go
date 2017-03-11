@@ -31,6 +31,7 @@ func main() {
 	var id int
 	var err error
 	err = nil
+	time.Sleep(1 * time.Millisecond)
 	for {
 		if len(os.Args) <= 1 || err != nil {
 			fmt.Println("Enter id: ")
@@ -47,18 +48,17 @@ func main() {
 		}
 
 	}
-
 	fmt.Print("My id is: ", id, "\n")
 
-	tx, rx := network.Init() //get transmit and receive channels
+	tx, rx, peerTx := network.Init(id) //get transmit and receive channels
 	// The example message. We just send one of these every second.
 	go func() {
-		helloMsg := network.Message{"Hello!", id, 0}
+		helloMsg := network.Message{"This is PATRICK!", id, 0}
 		for {
 			helloMsg.Iter++
 			tx <- helloMsg
 			time.Sleep(1 * time.Second)
 		}
 	}()
-	fsm.Fsm(id, tx, rx)
+	fsm.Fsm(id, tx, rx, peerTx)
 }
