@@ -7,19 +7,13 @@ import (
 )
 
 func main() {
-
-	order := order_handling.Order{2, config.UP, ""}
-	order_handling.New_floor_reached(3)
-	cost := order_handling.Get_cost(order)
-
-	fmt.Printf("Cost: %d\n", cost)
-
-	order_handling.Insert(order)
-	external_order_list := order_handling.Get_list()
-
-	for i, v := range external_order_list {
-		fmt.Printf("Order %d \t Destination: %d \t Button_type: %d\n",
-			i+1, v.Destination, v.Button_type)
-	}
+	fmt.Println("hei\n")
+	order_handling.Init()
+	order_handling.Insert(3, config.UP)
+	order_handling.Print_order_array()
+	order_handling.Insert(0, config.DOWN)
+	order_handling.Insert(2, -1)
+	order_handling.Assign_order_executer(3, config.UP, 12345)
+	order_handling.Print_order_array()
 
 }

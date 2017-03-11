@@ -3,60 +3,67 @@ package order_handling
 import (
 	"./../config"
 	"fmt"
-	"math"
+	//"math"
 )
 
-type Order struct {
-	Destination int
-	Button_type int
-	Executer    string
-}
+const (
+	ORDER_WITHOUT_EXECUTER = -1
+	NO_ORDER               = 0
+)
+const NUMBUTTON_TYPES = 3
 
-var external_order_list []Order
-var internal_order_list []Order
+var underlying_order_array [config.NUMFLOORS][NUMBUTTON_TYPES]int
+var order_list [][NUMBUTTON_TYPES]int // Matrix on the form [floor][button_type]
 
 var last_floor int
 var last_direction int
 
-var self string
-var no_executer string
-
 func Init() {
-	//
-	self = "dummy"
-	no_executer = ""
+	order_list = underlying_order_array[:][:]
+	/*for i := 0; i < config.NUMFLOORS; i++ {
+		new_slice := make([]int, 3)
+		order_list = append(order_list, new_slice)
 
+	}*/
+	fmt.Printf("Length: %d\n", len(order_list))
 }
 
-func Insert(order Order) bool {
+func Insert(floor int, button_type int) bool {
 
-	if order.Button_type == config.INTERNAL {
-		order_list := internal_order_list[:]
+	if order_is_valid(floor, button_type) {
+		order_list[floor-1][button_type] = ORDER_WITHOUT_EXECUTER
+		return true
+	}
+	return false
+}
 
-		if Already_exists(order_list, order) {
-			return false
-		} else {
-			internal_order_list = append(order_list, order)
-			return true
+func Print_order_array() {
+
+	for i := 0; i < config.NUMFLOORS; i++ {
+		for j := 0; j < 3; j++ {
+			str := ""
+			str += fmt.Sprintf("Floor: %d ", i+1)
+
+			if j == config.INTERNAL {
+				str += "INT  "
+			} else if j == config.UP {
+				str += "UP   "
+			} else {
+				str += "DOWN "
+			}
+			if underlying_order_array[i][j] == ORDER_WITHOUT_EXECUTER {
+				str += "Order without executer\n"
+			} else if underlying_order_array[i][j] == NO_ORDER {
+				str += "No order\n"
+			} else {
+				str += fmt.Sprintf("%d\n", underlying_order_array[i][j])
+			}
+			fmt.Printf(str)
 		}
-
-	} else if order.Button_type == config.UP || order.Button_type == config.DOWN {
-		order_list := external_order_list[:]
-
-		if Already_exists(order_list, order) {
-			return false
-		} else {
-			external_order_list = append(order_list, order)
-			return true
-		}
-
-	} else {
-		fmt.Printf("Button type ERROR, value is %d", order.Button_type)
-		return false
 	}
 }
 
-func Get_cost(order Order, state string) int {
+/*func Get_cost(floor int, button_type int, state string) int {
 
 	order_cost := 0
 	distance := int(math.Abs(float64(last_floor-order.Destination)))
@@ -96,7 +103,7 @@ func Get_cost(order Order, state string) int {
 		if (order.Button_type == config.INTERNAL) || (order.Button_type == last_direction){
 			return 0
 		} else{
-			direction_changes += 1	
+			direction_changes += 1
 		}
 	} else {
 		if last_direction == config.UP {
@@ -106,27 +113,30 @@ func Get_cost(order Order, state string) int {
 				}
 
 			} else {
-			
+
 				//Checking orders in order of priority
-				for i := last_floor + 1; i <= config.NUMFLOORS - 1; i++ { 
+				for i := last_floor + 1; i <= config.NUMFLOORS - 1; i++ {
 					if (order.Destination > last_floor) && (order.Button_type == config.UP)
-				
+
 
 				}
-			
+
 			}
 		}
 	}
 
-	
+
 
 	return order_cost
+}*/
+
+func Assign_order_executer(floor int, button_type int, executer_id int) {
+	if order_is_valid(floor, button_type) {
+		order_list[floor-1][button_type] = executer_id
+	}
 }
 
-func Assign_elevator() {
-
-}
-
+/*
 func Get_next(state string) (next_order Order) {
 
 	temp_lowest_cost = 1000
@@ -145,7 +155,7 @@ func Get_next(state string) (next_order Order) {
 
 	return next_order
 }
-
+*/
 func New_floor_reached(floor int) {
 	last_floor = floor
 	if floor == 0 {
@@ -160,22 +170,28 @@ func Storage_test() {
 
 }
 
-func Get_list() []Order {
-
-	deep_copy := make([]Order, len(external_order_list))
-
-	for i, v := range external_order_list {
-		deep_copy[i] = v
-	}
-	return deep_copy
+func Get_list() [config.NUMFLOORS][NUMBUTTON_TYPES]int {
+	return underlying_order_array
 }
 
-func Already_exists(order_list []Order, order Order) bool {
-	for _, v := range order_list {
-		if v.Destination == order.Destination && v.Button_type == order.Button_type {
-			return true
-		}
-
+func Already_exists(order_list [][]int, floor int, button_type int) bool {
+	if order_list[floor][button_type] == 0 {
+		return false
 	}
-	return false
+	return true
+}
+
+func order_is_valid(floor int, button_type int) bool {
+
+	if (floor > config.NUMFLOORS) || (floor < 1) {
+		fmt.Printf("order_handling.FLOOR_ERROR, selected floor is %d, out of range\n", floor)
+		return false
+	}
+
+	if (button_type > NUMBUTTON_TYPES-1) || (button_type < 0) {
+		fmt.Printf("order_handling.BUTTON_TYPE_ERROR, selected button type is %d, out of range\n", button_type)
+		return false
+	}
+
+	return true
 }
