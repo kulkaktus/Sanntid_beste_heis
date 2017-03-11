@@ -18,9 +18,9 @@ const (
 )
 
 const (
-	DISTANCE_COST           = 1
-	STOPS_INBETWEEN_COST    = 1
-	OPPOSITE_DIRECTION_COST = 5
+	DISTANCE_COST         = 1
+	STOPS_INBETWEEN_COST  = 1
+	DIRECTION_CHANGE_COST = 5
 )
 
 const (
