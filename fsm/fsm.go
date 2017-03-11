@@ -17,19 +17,19 @@ import (
 
 var floor int
 
-func Fsm(id int, tx chan<- network.Message, rx <-chan network.Message) {
-	floor = 0
-	fmt.Println("Started")
+func Fsm(id int, tx chan<- network.Message, rx <-chan network.Message, peerTx chan<- bool) {
+	floor = sensors.Get()
+	fmt.Printf("Started at floor %d\n", floor)
 	state := "idle"
-	check_network(id, tx, rx)
+	go check_network(id, tx, rx)
 	for {
 		//fmt.Println("Loop\n")
 		switch state {
 		case "idle":
-			check_io(id, tx)
+			state = check_io(id, tx)
 			//check_network(id, tx, rx)
 		case "running":
-			check_io(id, tx)
+			state = check_io(id, tx)
 			//check_network(id, tx, rx)
 		}
 	}
@@ -63,20 +63,19 @@ func check_io(id int, tx chan<- network.Message) (next_state string) {
 	return
 }
 
-func check_network(id int, tx chan<- network.Message, rx <-chan network.Message) int {
+func check_network(id int, tx chan<- network.Message, rx <-chan network.Message) {
 	for {
 		select {
 		case p := <-network.PeerUpdateCh:
 			fmt.Printf("Peer update:\n")
-			fmt.Printf("  Peers:    %q\n", p.Peers)
-			fmt.Printf("  New:      %q\n", p.New)
-			fmt.Printf("  Lost:     %q\n", p.Lost)
+			fmt.Printf("  Peers:    %d\n", p.Peers)
+			fmt.Printf("  New:      %d\n", p.New)
+			fmt.Printf("  Lost:     %d\n", p.Lost)
 
 		case a := <-rx:
 			if a.Id != id {
 				fmt.Printf("Received: %#v\n", a.Msg)
 			}
 		}
-		return 0
 	}
 }
