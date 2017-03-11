@@ -7,6 +7,12 @@ import (
 	"math"
 )
 
+/*Her har jeg initialisert last_direction = config.DOWN, dvs at den ved initialisering
+vil kjøre NEDOVER til nærmeste etasje. Når den er blitt initialisert, er det viktig å
+kjøre funksjonen arrived at floor, slik at man ikke ender opp med siste kjøreretning
+nedover i første etasje, det kan by på problemer. En annen måte å gjøre det på er å
+ta inn første etasjen man når i init-funksjonen som parameter*/
+
 const (
 	ORDER_WITHOUT_EXECUTER = -1
 	NO_ORDER               = 0
@@ -23,8 +29,8 @@ var self int
 
 func Init(self_id int) {
 	order_list = underlying_order_array[:][:]
-	fmt.Printf("Length: %d\n", len(order_list))
 	self = self_id
+	last_direction = config.DOWN
 }
 
 /*func Merge_order_lists(new_list [config.NUMFLOORS][NUMBUTTON_TYPES]int){
@@ -275,6 +281,18 @@ func Get_order_array() [config.NUMFLOORS][NUMBUTTON_TYPES]int {
 	return underlying_order_array
 }
 
+func Clear_order(destination int, button_type int) {
+	order_list[destination][button_type] = 0
+}
+
+func Clear_all_orders() {
+	for i := 0; i < config.NUMFLOORS; i++ {
+		for j := 0; j < NUMBUTTON_TYPES; j++ {
+			Clear_order(i, j)
+		}
+	}
+}
+
 func Already_exists(floor int, button_type int) bool {
 	if order_list[floor-1][button_type] == 0 {
 		return false
@@ -290,7 +308,17 @@ func order_is_valid(floor int, button_type int) bool {
 	}
 
 	if (button_type > NUMBUTTON_TYPES-1) || (button_type < 0) {
-		fmt.Printf("order_handling.BUTTON_TYPE_ERROR, selected button type is %d, out of range\n", button_type)
+		fmt.Printf("order_handling.BUTTON_TYPE_ERROR:\nselected button type is %d, out of range\n", button_type)
+		return false
+	}
+
+	if (floor == config.NUMFLOORS) && (button_type == config.UP) {
+		fmt.Printf("order_handling.ORDER_ERROR\nInvalid order, requested floor: NUMFLOORS, UP\n")
+		return false
+	}
+
+	if (floor == 1) && (button_type == config.DOWN) {
+		fmt.Printf("order_handling.ORDER_ERROR\nInvalid order, requested floor: 1, DOWN\n")
 		return false
 	}
 

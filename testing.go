@@ -9,12 +9,13 @@ import (
 func main() {
 	fmt.Println("hei\n")
 	order_handling.Init(123123)
-	order_handling.Insert(3, config.UP)
 	order_handling.Print_order_array()
+	fmt.Println("********TESTING CASE 1, UPWARDS\n*********")
+	order_handling.New_floor_reached(1)
 
-	order_handling.Insert(0, config.DOWN)
-	order_handling.Insert(2, -1)
-	order_handling.Assign_order_executer(3, config.UP, 12345)
+	fmt.Printf("Cost of 2 UP: %d\n", order_handling.Get_cost(2, config.UP, "idle"))
+	fmt.Printf("Cost of 3 UP: %d\n", order_handling.Get_cost(3, config.UP, "idle"))
+
 	order_handling.Print_order_array()
 
 }
