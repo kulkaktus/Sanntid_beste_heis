@@ -1,7 +1,8 @@
 package order_handling
 
 import (
-	"./../config"
+	"../config"
+	"../network"
 	"fmt"
 	//"math"
 )
@@ -57,6 +58,32 @@ func Print_order_array() {
 				str += "No order\n"
 			} else {
 				str += fmt.Sprintf("%d\n", underlying_order_array[i][j])
+			}
+			fmt.Printf(str)
+		}
+	}
+}
+
+func Print_order_struct(order_struct network.Orders) {
+
+	for i := 0; i < config.NUMFLOORS; i++ {
+		for j := 0; j < 3; j++ {
+			str := ""
+			str += fmt.Sprintf("Floor: %d ", i+1)
+
+			if j == config.INTERNAL {
+				str += "INT  "
+			} else if j == config.UP {
+				str += "UP   "
+			} else {
+				str += "DOWN "
+			}
+			if order_struct.Orders[i][j] == ORDER_WITHOUT_EXECUTER {
+				str += "Order without executer\n"
+			} else if order_struct.Orders[i][j] == NO_ORDER {
+				str += "No order\n"
+			} else {
+				str += fmt.Sprintf("%d\n", order_struct.Orders[i][j])
 			}
 			fmt.Printf(str)
 		}
@@ -174,8 +201,8 @@ func Get_list() [config.NUMFLOORS][NUMBUTTON_TYPES]int {
 	return underlying_order_array
 }
 
-func Already_exists(order_list [][]int, floor int, button_type int) bool {
-	if order_list[floor][button_type] == 0 {
+func Already_exists(floor int, button_type int) bool {
+	if order_list[floor-1][button_type] == 0 {
 		return false
 	}
 	return true

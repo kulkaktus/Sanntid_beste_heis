@@ -6,7 +6,7 @@ import (
 	"./../io"
 )
 
-func Lights_init() error {
+func Init() error {
 	return nil
 }
 

@@ -2,13 +2,14 @@ package main
 
 import (
 	"./config"
+	"./fsm"
 	"./io/buttons"
 	"./io/io"
 	"./io/lights"
-	//"./io/motor"
-	"./fsm"
+	"./io/motor"
 	"./io/sensors"
 	"./network"
+	"./order_handling"
 	"./peers"
 	"fmt"
 	"os"
@@ -21,12 +22,14 @@ import (
 //  will be received as zero-values.
 
 func main() {
-	lights.Lights_init()
-	peers.Peers_init()
-	config.Config_init()
-	buttons.Buttons_init()
-	sensors.Sensors_init()
-	io.Io_init()
+	lights.Init()
+	peers.Init()
+	config.Init()
+	buttons.Init()
+	motor.Init()
+	sensors.Init()
+	order_handling.Init()
+	io.Init()
 	var id_in string
 	var id int
 	var err error
@@ -50,15 +53,15 @@ func main() {
 	}
 	fmt.Print("My id is: ", id, "\n")
 
-	tx, rx, peerTx := network.Init(id) //get transmit and receive channels
+	ordersTx, ordersRx, updateTx, updateRx, messageTx, messageRx := network.Init(id) //get transmit and receive channels
 	// The example message. We just send one of these every second.
-	go func() {
+	/*go func() {
 		helloMsg := network.Message{"This is PATRICK!", id, 0}
 		for {
 			helloMsg.Iter++
 			tx <- helloMsg
 			time.Sleep(1 * time.Second)
 		}
-	}()
-	fsm.Fsm(id, tx, rx, peerTx)
+	}()*/
+	fsm.Fsm(id, ordersTx, ordersRx, updateTx, updateRx, messageTx, messageRx)
 }

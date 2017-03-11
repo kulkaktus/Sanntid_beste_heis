@@ -13,8 +13,9 @@ const (
 )
 
 const (
-	NUMFLOORS    = 4
-	NUMELEVATORS = 3
+	NUMFLOORS       = 4
+	NUMELEVATORS    = 3
+	NUMBUTTON_TYPES = 3
 )
 
 const (
@@ -27,7 +28,7 @@ const (
 	Motor_speed = 2800
 )
 
-func Config_init() error {
+func Init() error {
 	runtime.GOMAXPROCS(4)
 	return nil
 }

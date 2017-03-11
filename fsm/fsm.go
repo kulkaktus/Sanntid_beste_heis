@@ -9,39 +9,53 @@ import (
 	"../io/sensors"
 	"../network"
 	//"../peers"
-	//"../order_handling"
+	"../order_handling"
 	"fmt"
 	//"os"
-	//"time"
+	"time"
 )
 
 var floor int
+var peers []int
 
-func Fsm(id int, tx chan<- network.Message, rx <-chan network.Message, peerTx chan<- bool) {
+const (
+	tries_to_send   = 5
+	time_to_respond = 50 * time.Millisecond
+)
+
+func Fsm(id int, ordersTx chan<- network.Orders, ordersRx <-chan network.Orders, updateTx chan<- network.Update, updateRx <-chan network.Update, messageTx chan<- network.Message, messageRx <-chan network.Message) {
 	floor = sensors.Get()
 	fmt.Printf("Started at floor %d\n", floor)
 	state := "idle"
-	go check_network(id, tx, rx)
+	score_responseRx := make(chan [2]int)
+	orders_responseRx := make(chan int)
+	go check_network(id, ordersTx, ordersRx, updateTx, updateRx, messageTx, messageRx, score_responseRx, orders_responseRx)
 	for {
-		//fmt.Println("Loop\n")
+		//fmt.Println("Loop")
 		switch state {
 		case "idle":
-			state = check_io(id, tx)
-			//check_network(id, tx, rx)
+			state = check_io(id, updateTx)
 		case "running":
-			state = check_io(id, tx)
-			//check_network(id, tx, rx)
+			state = check_io(id, updateTx)
+		case "":
+			state = check_io(id, updateTx)
 		}
 	}
 }
 
-func check_io(id int, tx chan<- network.Message) (next_state string) {
+func check_io(id int, updateTx chan<- network.Update) (next_state string) {
 	for button_type_i := 0; button_type_i <= config.DOWN; button_type_i++ {
 		for floor_i := 1; floor_i <= config.NUMFLOORS; floor_i++ {
 			if buttons.Get(button_type_i, floor_i) {
 				lights.Set(button_type_i, floor_i)
 				motor.Go(button_type_i)
 				next_state = "running"
+				if !order_handling.Already_exists(floor_i, button_type_i) {
+					fmt.Println("orderinserted")
+					order_handling.Print_order_array()
+					order_handling.Insert(floor_i, button_type_i)
+					updateTx <- network.Update{floor_i, button_type_i, id}
+				}
 				/*go func() {
 					order := order_handling.Order{floor_i, button_type_i, ""}
 					if order_handling.Insert(order) {
@@ -63,19 +77,56 @@ func check_io(id int, tx chan<- network.Message) (next_state string) {
 	return
 }
 
-func check_network(id int, tx chan<- network.Message, rx <-chan network.Message) {
+func check_network(id int, ordersTx chan<- network.Orders, ordersRx <-chan network.Orders, updateTx chan<- network.Update, updateRx <-chan network.Update, messageTx chan<- network.Message, messageRx <-chan network.Message, score_responseRx chan<- [2]int, orders_responseRx chan<- int) {
 	for {
 		select {
 		case p := <-network.PeerUpdateCh:
+			peers = p.Peers
 			fmt.Printf("Peer update:\n")
 			fmt.Printf("  Peers:    %d\n", p.Peers)
 			fmt.Printf("  New:      %d\n", p.New)
 			fmt.Printf("  Lost:     %d\n", p.Lost)
-
-		case a := <-rx:
-			if a.Id != id {
-				fmt.Printf("Received: %#v\n", a.Msg)
+		case b := <-ordersRx:
+			order_handling.Print_order_struct(b)
+		case d := <-updateRx:
+			order_handling.Assign_order_executer(d.Floor, 0, d.Executer)
+			str := fmt.Sprintf("Order update at floor %d of type ", d.Floor)
+			if d.Button_type == config.INTERNAL {
+				str += "INT  "
+			} else if d.Button_type == config.UP {
+				str += "UP   "
+			} else {
+				str += "DOWN "
 			}
+			if d.Executer == -1 {
+				str += "Order is without executer\n"
+			} else if d.Executer == 0 {
+				str += "Order cleared\n"
+			} else {
+				str += fmt.Sprintf("Order handled by: %d\n", d.Executer)
+			}
+			fmt.Printf(str)
+		case f := <-messageRx:
+			if f.To_id == id {
+				fmt.Printf("Received: %d\n", f.Content)
+				if f.Type == network.SCORE_RESPONSE_T {
+					score_responseRx <- [2]int{f.From_id, f.Content}
+				} else if f.Type == network.SCORE_RESPONSE_T {
+					orders_responseRx <- id
+				}
+			}
+		}
+	}
+}
+
+func update_order(button_type int, floor int, handler int, updateTx chan<- network.Update, score_responseRx <-chan [2]int) {
+	for i := 0; i < tries_to_send; i++ {
+		updateTx <- network.Update{floor, button_type, handler}
+		select {
+		case a := <-score_responseRx:
+			fmt.Printf("Received score of %d, from %d \n", a[0], a[1])
+		case <-time.After(time_to_respond):
+			break
 		}
 	}
 }

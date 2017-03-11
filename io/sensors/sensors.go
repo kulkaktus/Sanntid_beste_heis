@@ -6,7 +6,7 @@ import (
 	"./../io"
 )
 
-func Sensors_init() error {
+func Init() error {
 	return nil
 }
 

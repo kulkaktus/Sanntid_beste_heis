@@ -18,7 +18,7 @@ type PeerUpdate struct {
 const interval = 15 * time.Millisecond
 const timeout = 50 * time.Millisecond
 
-func Peers_init() error {
+func Init() error {
 	return nil
 }
 
@@ -39,7 +39,7 @@ func Transmitter(port int, id int, transmitEnable <-chan bool) {
 	}
 }
 
-func Receiver(port int, peerUpdateCh chan<- PeerUpdate) {
+func Receiver(port int, id_self int, peerUpdateCh chan<- PeerUpdate) {
 
 	var buf [1024]byte
 	var p PeerUpdate
@@ -61,7 +61,7 @@ func Receiver(port int, peerUpdateCh chan<- PeerUpdate) {
 		}*/
 		// Adding new connection
 		p.New = 0
-		if id != 0 {
+		if id != 0 && id != id_self {
 			if _, idExists := lastSeen[id]; !idExists {
 				p.New = id
 				updated = true

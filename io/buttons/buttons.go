@@ -6,7 +6,7 @@ import (
 	"./../io"
 )
 
-func Buttons_init() error {
+func Init() error {
 	return nil
 }
 

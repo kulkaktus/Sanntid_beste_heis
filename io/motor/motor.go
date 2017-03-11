@@ -6,8 +6,8 @@ import (
 	"./../io"
 )
 
-func Motor_init() {
-	config.Config_init()
+func Init() {
+	config.Init()
 	io.Write_analog(channels.Motor_value, 0)
 }
 

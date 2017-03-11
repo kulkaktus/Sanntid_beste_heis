@@ -9,7 +9,7 @@ import (
 	"C"
 )
 
-func Io_init() bool {
+func Init() bool {
 	return (int(C.io_init()) != 0)
 }
 
