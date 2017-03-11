@@ -1,11 +1,11 @@
 package network
 
 import (
-	"./../bcast"
-	"./../conn"
-	//"./../localip"
-	"./../peers"
-	"./../order_handling"
+	"../bcast"
+	"../conn"
+	//"../localip"
+	//"../order_handling"
+	"../peers"
 	"fmt"
 	"net"
 	"sort"
@@ -19,11 +19,12 @@ var broadcast_ip string
 type Order struct {
 	Floor       int
 	Button_type int
+	Executor    int
 }
 
 type Message struct {
 	Msg  string
-	Id   string
+	Id   int
 	Iter int
 	//Message_type int
 	//Order
@@ -53,8 +54,8 @@ func Init() (chan<- Message, <-chan Message) {
 	// ... and start the transmitter/receiver pair on some port
 	// These functions can take any number of channels! It is also possible to
 	//  start multiple transmitters/receivers on the same port.
-	go bcast.Transmitter(16569, helloTx)
-	go bcast.Receiver(16569, helloRx)
+	go bcast.Transmitter(40012, helloTx)
+	go bcast.Receiver(40012, helloRx)
 
 	return helloTx, helloRx
 	// The example message. We just send one of these every second.
@@ -119,7 +120,7 @@ func Receiver(port int, peerUpdateChannel chan<- peers.PeerUpdate) {
 		if updated {
 			p.Peers = make([]string, 0, len(lastSeen))
 
-			for k, _ := range lastSeen {
+			for k := range lastSeen {
 				p.Peers = append(p.Peers, k)
 			}
 
@@ -129,15 +130,6 @@ func Receiver(port int, peerUpdateChannel chan<- peers.PeerUpdate) {
 		}
 	}
 }
-
-func SendMessage(message Message, recipient_id string) {
-
-}
-
-func Send_order(cost int, order order_handling.Order, tx chan, {
-	
-}
-
 
 /*
 

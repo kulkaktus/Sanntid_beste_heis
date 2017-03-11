@@ -6,21 +6,21 @@ import (
 	"./../io"
 )
 
-func Motor_init(){
+func Motor_init() {
 	config.Config_init()
 	io.Write_analog(channels.Motor_value, 0)
 }
 
 func Go(direction int) {
-	if(direction == config.UP){
-		io.Set_bit(channels.Motor_dir)
-		io.Write_analog(channels.Motor_value, config.Motor_speed)
-	}else if(direction == config.DOWN){
+	if direction == config.UP {
 		io.Clear_bit(channels.Motor_dir)
+		io.Write_analog(channels.Motor_value, config.Motor_speed)
+	} else if direction == config.DOWN {
+		io.Set_bit(channels.Motor_dir)
 		io.Write_analog(channels.Motor_value, config.Motor_speed)
 	}
 }
 
-func Stop(){
+func Stop() {
 	io.Write_analog(channels.Motor_value, 0)
 }
