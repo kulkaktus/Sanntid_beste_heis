@@ -47,10 +47,10 @@ func Init(self_id int) {
 	}
 }*/
 
-func Insert(floor int, button_type int) bool {
+func Insert(destination int, button_type int) bool {
 
-	if order_is_valid(floor, button_type) {
-		order_list[floor-1][button_type] = ORDER_WITHOUT_EXECUTER
+	if order_is_valid(destination, button_type) {
+		order_list[destination-1][button_type] = ORDER_WITHOUT_EXECUTER
 		return true
 	}
 	return false
@@ -114,6 +114,8 @@ func Get_cost(destination int, button_type int, state string) (order_cost int) {
 	order_cost = 0
 	distance := 0
 	instance := 0
+	orders_in_same_direction := false
+
 	if state == "idle" {
 		if destination == last_floor {
 			if (button_type == last_direction) || (button_type == config.INTERNAL) {
@@ -130,7 +132,6 @@ func Get_cost(destination int, button_type int, state string) (order_cost int) {
 
 	//Calculating scores for internal orders
 	if button_type == config.INTERNAL {
-
 		if last_direction == config.UP {
 			if destination > last_floor {
 				instance = 1
@@ -177,10 +178,10 @@ func Get_cost(destination int, button_type int, state string) (order_cost int) {
 		distance += 2*config.NUMFLOORS - last_floor - destination
 		fmt.Printf("CASE 3\n")
 	case 4:
-		distance += 2*config.NUMFLOORS + destination - last_floor - 1
+		distance += 2*config.NUMFLOORS + destination - last_floor - 2
 		fmt.Printf("CASE 4\n")
 	case 5:
-		distance += 2*config.NUMFLOORS + last_floor - destination - 1
+		distance += 2*config.NUMFLOORS + last_floor - destination - 2
 		fmt.Printf("CASE 5\n")
 	}
 
@@ -216,12 +217,15 @@ func Get_cost(destination int, button_type int, state string) (order_cost int) {
 	order_cost += config.STOPS_INBETWEEN_COST * stops_inbetween
 
 	*/
+	if !order_is_valid(destination, button_type) {
+		fmt.Printf("WARNING: Order not valid, generated cost incorrect\n")
+	}
 	return order_cost
 }
 
-func Assign_order_executer(floor int, button_type int, executer_id int) {
-	if order_is_valid(floor, button_type) {
-		order_list[floor-1][button_type] = executer_id
+func Assign_order_executer(destination int, button_type int, executer_id int) {
+	if order_is_valid(destination, button_type) {
+		order_list[destination-1][button_type] = executer_id
 	}
 }
 
@@ -263,10 +267,12 @@ func Get_next(state string) (destination int, button_type int) {
 
 func New_floor_reached(floor int) bool {
 	last_floor = floor
-	if floor == 0 {
+	if (floor == 1) || (floor > last_floor) {
 		last_direction = config.UP
-	} else if floor == config.NUMFLOORS {
+		fmt.Printf("Going UPwards\n")
+	} else if (floor == config.NUMFLOORS) || (floor < last_floor) {
 		last_direction = config.DOWN
+		fmt.Printf("Going DOWNwards\n")
 	}
 
 	if (order_list[floor][last_direction] == self) || (order_list[floor][config.INTERNAL] == self) {
@@ -298,17 +304,17 @@ func Clear_all_orders() {
 	}
 }
 
-func Already_exists(floor int, button_type int) bool {
-	if order_list[floor-1][button_type] == 0 {
+func Already_exists(destination int, button_type int) bool {
+	if order_list[destination-1][button_type] == 0 {
 		return false
 	}
 	return true
 }
 
-func order_is_valid(floor int, button_type int) bool {
+func order_is_valid(destination int, button_type int) bool {
 
-	if (floor > config.NUMFLOORS) || (floor < 1) {
-		fmt.Printf("order_handling.FLOOR_ERROR, selected floor is %d, out of range\n", floor)
+	if (destination > config.NUMFLOORS) || (destination < 1) {
+		fmt.Printf("order_handling.FLOOR_ERROR, selected floor is %d, out of range\n", destination)
 		return false
 	}
 
@@ -317,12 +323,12 @@ func order_is_valid(floor int, button_type int) bool {
 		return false
 	}
 
-	if (floor == config.NUMFLOORS) && (button_type == config.UP) {
+	if (destination == config.NUMFLOORS) && (button_type == config.UP) {
 		fmt.Printf("order_handling.ORDER_ERROR\nInvalid order, requested floor: NUMFLOORS, UP\n")
 		return false
 	}
 
-	if (floor == 1) && (button_type == config.DOWN) {
+	if (destination == 1) && (button_type == config.DOWN) {
 		fmt.Printf("order_handling.ORDER_ERROR\nInvalid order, requested floor: 1, DOWN\n")
 		return false
 	}
