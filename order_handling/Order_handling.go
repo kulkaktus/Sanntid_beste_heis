@@ -14,8 +14,8 @@ nedover i første etasje, det kan by på problemer. En annen måte å gjøre det
 ta inn første etasjen man når i init-funksjonen som parameter*/
 
 const (
-	ORDER_WITHOUT_EXECUTER = -1
-	NO_ORDER               = 0
+	ORDER_WITHOUT_EXECUTER = 0
+	NO_ORDER               = -1
 )
 const NUMBUTTON_TYPES = 3
 
@@ -29,23 +29,24 @@ var self int
 
 func Init(self_id int) {
 	order_list = underlying_order_array[:][:]
+	for i := 0; i < config.NUMFLOORS; i++ {
+		for j := 0; j < NUMBUTTON_TYPES; j++ {
+			order_list[i][j] = -1
+		}
+	}
 	self = self_id
 	last_direction = config.DOWN
 }
 
-/*func Merge_order_lists(new_list [config.NUMFLOORS][NUMBUTTON_TYPES]int){
+func Merge_order_lists(new_list [config.NUMFLOORS][NUMBUTTON_TYPES]int){
 	for i:=0; i<config.NUMFLOORS; i++ {
-		for j:=0; j<NUMBUTTON_TYPES; j++ {
-			if order_list[i][j] != new_list[i][j] {
-				if order_list [i][j] == NO_ORDER {
-					order_list[i][j] == new_list[i][j]
-				} if (order_list[i][j] == ORDER_WITHOUT_EXECUTER) && (order_list[i][j] != NO_ORDER){
-					order_list[i][j] == new_list[i][j]
-				}
+		for j:=1; j<NUMBUTTON_TYPES; j++ {
+			if order_list[i][j] < new_list[i][j] {
+				order_list[i][j] = new_list[i][j]
 			}
 		}
-	}
-}*/
+	}				
+}
 
 func Insert(destination int, button_type int) bool {
 
