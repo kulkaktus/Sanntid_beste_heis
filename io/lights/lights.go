@@ -46,6 +46,8 @@ func Set(type_ int, floor int) error {
 		}
 	} else if type_ == config.STOP {
 		io.Set_bit(channels.Stop_light)
+	} else if type_ == config.DOOR {
+		io.Set_bit(channels.Door)
 	}
 	return nil
 }
@@ -71,6 +73,8 @@ func Clear(type_ int, floor int) error {
 		}
 	} else if type_ == config.STOP {
 		io.Clear_bit(channels.Stop_light)
+	} else if type_ == config.DOOR {
+		io.Clear_bit(channels.Door)
 	}
 	return nil
 }

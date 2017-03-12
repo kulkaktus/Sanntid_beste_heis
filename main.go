@@ -9,8 +9,8 @@ import (
 	"./io/motor"
 	"./io/sensors"
 	"./network"
+	"./network/peers"
 	"./order_handling"
-	"./peers"
 	"fmt"
 	"os"
 	"strconv"
@@ -28,7 +28,6 @@ func main() {
 	buttons.Init()
 	motor.Init()
 	sensors.Init()
-	order_handling.Init()
 	io.Init()
 	var id_in string
 	var id int
@@ -52,7 +51,7 @@ func main() {
 
 	}
 	fmt.Print("My id is: ", id, "\n")
-
+	order_handling.Init(id)
 	ordersTx, ordersRx, updateTx, updateRx, messageTx, messageRx := network.Init(id) //get transmit and receive channels
 	// The example message. We just send one of these every second.
 	/*go func() {

@@ -8,7 +8,7 @@ import (
 	"../io/motor"
 	"../io/sensors"
 	"../network"
-	//"../peers"
+	//"../network/peers"
 	"../order_handling"
 	"fmt"
 	//"os"
@@ -21,9 +21,12 @@ var peers []int
 const (
 	tries_to_send   = 5
 	time_to_respond = 50 * time.Millisecond
+
+	doors_open_for = 3 * time.Second
 )
 
 func Fsm(id int, ordersTx chan<- network.Orders, ordersRx <-chan network.Orders, updateTx chan<- network.Update, updateRx <-chan network.Update, messageTx chan<- network.Message, messageRx <-chan network.Message) {
+	doors_open_since := time.Hour
 	floor = sensors.Get()
 	fmt.Printf("Started at floor %d\n", floor)
 	state := "idle"
@@ -31,25 +34,35 @@ func Fsm(id int, ordersTx chan<- network.Orders, ordersRx <-chan network.Orders,
 	orders_responseRx := make(chan int)
 	go check_network(id, ordersTx, ordersRx, updateTx, updateRx, messageTx, messageRx, score_responseRx, orders_responseRx)
 	for {
-		//fmt.Println("Loop")
+		check_buttons_and_update_orders(id, updateTx)
+
+		current_order_floor, _ /*current_order_type*/ := order_handling.Get_next(state)
+		if current_order_floor == sensors.Get() {
+			doors_open_since = 0
+			motor.Stop()
+			state = "door_open"
+		}
 		switch state {
 		case "idle":
-			state = check_io(id, updateTx)
+
 		case "running":
-			state = check_io(id, updateTx)
+
+		case "door_open":
+			if doors_open_since < doors_open_for {
+				lights.Set(config.DOOR, 0)
+			}
+
 		case "":
-			state = check_io(id, updateTx)
+
 		}
 	}
 }
 
-func check_io(id int, updateTx chan<- network.Update) (next_state string) {
+func check_buttons_and_update_orders(id int, updateTx chan<- network.Update) {
 	for button_type_i := 0; button_type_i <= config.DOWN; button_type_i++ {
 		for floor_i := 1; floor_i <= config.NUMFLOORS; floor_i++ {
 			if buttons.Get(button_type_i, floor_i) {
 				lights.Set(button_type_i, floor_i)
-				motor.Go(button_type_i)
-				next_state = "running"
 				if !order_handling.Already_exists(floor_i, button_type_i) {
 					fmt.Println("orderinserted")
 					order_handling.Print_order_array()
@@ -67,14 +80,12 @@ func check_io(id int, updateTx chan<- network.Update) (next_state string) {
 			}
 		}
 	}
-	if floor != sensors.Get() && sensors.Get() != 0 {
+	/*if floor != sensors.Get() && sensors.Get() != 0 {
 		motor.Stop()
-		next_state = "idle"
 		floor = sensors.Get()
 		lights.Set(config.INDICATE, floor)
 		fmt.Printf("Arrived at %d \n", floor)
-	}
-	return
+	}*/
 }
 
 func check_network(id int, ordersTx chan<- network.Orders, ordersRx <-chan network.Orders, updateTx chan<- network.Update, updateRx <-chan network.Update, messageTx chan<- network.Message, messageRx <-chan network.Message, score_responseRx chan<- [2]int, orders_responseRx chan<- int) {
@@ -112,7 +123,7 @@ func check_network(id int, ordersTx chan<- network.Orders, ordersRx <-chan netwo
 				if f.Type == network.SCORE_RESPONSE_T {
 					score_responseRx <- [2]int{f.From_id, f.Content}
 				} else if f.Type == network.SCORE_RESPONSE_T {
-					orders_responseRx <- id
+					orders_responseRx <- f.From_id
 				}
 			}
 		}

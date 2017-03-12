@@ -2,7 +2,7 @@ package order_handling
 
 import (
 	"../config"
-	//"../network"
+	"../network"
 	"fmt"
 	"math"
 )
@@ -82,7 +82,6 @@ func Print_order_array() {
 	}
 }
 
-/*
 func Print_order_struct(order_struct network.Orders) {
 
 	for i := 0; i < config.NUMFLOORS; i++ {
@@ -108,115 +107,25 @@ func Print_order_struct(order_struct network.Orders) {
 		}
 	}
 }
-*/
-func Get_cost(destination int, button_type int, state string) (order_cost int) {
 
-	order_cost = 0
-	distance := 0
-	instance := 0
-	if state == "idle" {
-		if destination == last_floor {
-			if (button_type == last_direction) || (button_type == config.INTERNAL) {
-				return 0
-			} else if button_type != last_direction {
-				if button_type == config.UP {
-					instance = 3
-				} else if button_type == config.DOWN {
-					instance = 2
-				}
-			}
+func Get_cost(destination int, button_type int, state string) (cost int) {
+	var next_floor int
+	if state == "running" && last_direction == config.UP {
+		next_floor = last_floor + 1
+		if destination < next_floor {
+			cost += config.DIRECTION_CHANGE_COST
 		}
+	} else if state == "running" && last_direction == config.DOWN {
+		next_floor = last_floor - 1
+		if destination > next_floor {
+			cost += config.DIRECTION_CHANGE_COST
+		}
+	} else {
+		next_floor = last_floor
+		cost += config.STARTUP_FROM_IDLE_COST
 	}
-
-	//Calculating scores for internal orders
-	if button_type == config.INTERNAL {
-
-		if last_direction == config.UP {
-			if destination > last_floor {
-				instance = 1
-
-			} else if destination <= last_floor {
-				instance = 3
-			}
-
-		} else if last_direction == config.DOWN {
-			if destination < last_floor {
-				instance = 1
-			} else if destination > last_floor {
-				instance = 2
-			}
-		}
-
-	} else if last_direction == config.UP {
-		if (destination > last_floor) && ((button_type == last_direction) || (destination == config.NUMFLOORS)) {
-			instance = 1
-		} else if button_type != last_direction {
-			instance = 3
-		} else if (destination <= last_floor) && (button_type == last_direction) {
-			instance = 4
-		}
-
-	} else if last_direction == config.DOWN {
-		if (destination < last_floor) && ((button_type == last_direction) || (destination == 1)) {
-			instance = 1
-		} else if button_type != last_direction {
-			instance = 2
-		} else if (destination >= last_floor) && (button_type == last_direction) {
-			instance = 5
-		}
-	}
-
-	switch instance {
-	case 1:
-		distance += int(math.Abs(float64(destination - last_floor)))
-		fmt.Printf("CASE 1\n")
-	case 2:
-		distance += last_floor + destination
-		fmt.Printf("CASE 2\n")
-	case 3:
-		distance += 2*config.NUMFLOORS - last_floor - destination
-		fmt.Printf("CASE 3\n")
-	case 4:
-		distance += 2*config.NUMFLOORS + destination - last_floor - 1
-		fmt.Printf("CASE 4\n")
-	case 5:
-		distance += 2*config.NUMFLOORS + last_floor - destination - 1
-		fmt.Printf("CASE 5\n")
-	}
-
-	order_cost += config.DISTANCE_COST * distance
-
-	/*stops_inbetween := 0
-
-	if button_type ==
-
-	if last_floor < destination {
-
-		for _, floor_i := range external_order_list {
-			if v.Executer == self {
-				if (v.Destination > last_floor) && (v.Destination < order.Destination) {
-					stops_inbetween += 1
-				}
-				}
-		}
-	}
-	if last_floor > order.Destination {
-
-		for _, v := range external_order_list {
-			if v.Executer == self {
-					if (v.Destination < last_floor) && (v.Destination > order.Destination) {
-						stops_inbetween += 1
-					}
-
-				}
-			}
-
-		}
-	}
-	order_cost += config.STOPS_INBETWEEN_COST * stops_inbetween
-
-	*/
-	return order_cost
+	cost += int(math.Abs(float64(destination - last_floor)))
+	return cost
 }
 
 func Assign_order_executer(floor int, button_type int, executer_id int) {
@@ -226,39 +135,31 @@ func Assign_order_executer(floor int, button_type int, executer_id int) {
 }
 
 func Get_next(state string) (destination int, button_type int) {
+	var next_floor int
+	if state == "running" && last_direction == config.UP {
+		next_floor = last_floor + 1
+	} else if state == "running" && last_direction == config.DOWN {
+		next_floor = last_floor - 1
+	} else {
+		next_floor = last_floor
+	}
+	for floor_i := next_floor; floor_i < config.NUMFLOORS+next_floor; floor_i++ {
+		for button_type_i := 0; button_type_i < NUMBUTTON_TYPES; button_type_i++ {
+			if order_list[floor_i%config.NUMFLOORS][button_type_i] == self {
+				return floor_i + 1, button_type_i
 
-	cost := 1000
-	temp_lowest_cost := cost
-	destination, button_type = 0, 0
-
-	for i := 0; i < config.NUMFLOORS; i++ {
-		for j := 0; j < NUMBUTTON_TYPES; j++ {
-			if order_list[i][j] == self {
-				cost = Get_cost(i, j, state)
-				if cost < temp_lowest_cost {
-					temp_lowest_cost = cost
-					destination, button_type = i, j
-				}
 			}
 		}
 	}
-
-	if destination == 0 {
-		for i := 0; i < config.NUMFLOORS; i++ {
-			for j := 0; j < NUMBUTTON_TYPES; j++ {
-				if order_list[i][j] == ORDER_WITHOUT_EXECUTER {
-					cost = Get_cost(i, j, state)
-					if cost < temp_lowest_cost {
-						temp_lowest_cost = cost
-						destination, button_type = i, j
-					}
-				}
+	for floor_i := next_floor; floor_i < config.NUMFLOORS+next_floor; floor_i++ {
+		for button_type_i := 1; button_type_i < NUMBUTTON_TYPES; button_type_i++ {
+			if order_list[floor_i%config.NUMFLOORS][button_type_i] == ORDER_WITHOUT_EXECUTER {
+				order_list[floor_i%config.NUMFLOORS][button_type_i] = self
+				return floor_i + 1, button_type_i
 			}
 		}
-		order_list[destination][button_type] = self
 	}
-
-	return destination, button_type
+	return 0, 0
 }
 
 func New_floor_reached(floor int) bool {

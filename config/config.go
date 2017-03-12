@@ -10,6 +10,7 @@ const (
 	DOWN     = iota
 	INDICATE = iota
 	STOP     = iota
+	DOOR     = iota
 )
 
 const (
@@ -19,9 +20,9 @@ const (
 )
 
 const (
-	DISTANCE_COST         = 1
-	STOPS_INBETWEEN_COST  = 1
-	DIRECTION_CHANGE_COST = 5
+	DISTANCE_COST          = 1
+	STARTUP_FROM_IDLE_COST = 1
+	DIRECTION_CHANGE_COST  = 5
 )
 
 const (

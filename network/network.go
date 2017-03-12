@@ -1,12 +1,12 @@
 package network
 
 import (
-	"../bcast"
 	"../config"
+	"./bcast"
 	//"../conn"
 	//"../localip"
 	//"../order_handling"
-	"../peers"
+	"./peers"
 	//"fmt"
 	//"net"
 	//"sort"
