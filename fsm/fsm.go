@@ -41,8 +41,11 @@ func Fsm(id int, ordersTx chan<- network.Orders, ordersRx <-chan network.Orders,
 	fmt.Printf("Started at floor %d\n", floor)
 	order_handling.New_floor_reached(floor)
 	go check_network(id, ordersTx, ordersRx, updateTx, updateRx, messageTx, messageRx, score_responseRx, orders_responseRx)
+	if id == 101 {
+		time.Sleep(time.Hour)
+	}
 	for {
-		check_buttons_and_update_orders(id, updateTx)
+		check_buttons_and_update_orders(id, updateTx, score_responseRx)
 		order_handling.State = state
 		//current_order_floor := order_handling.Get_next(state)
 		switch state {
@@ -64,6 +67,7 @@ func Fsm(id int, ordersTx chan<- network.Orders, ordersRx <-chan network.Orders,
 				doors_open_since = time.Now()
 				state = "door_open"
 				order_handling.Clear_order(floor)
+				lights.Clear_floor(floor)
 			}
 
 		case "running":
@@ -72,7 +76,7 @@ func Fsm(id int, ordersTx chan<- network.Orders, ordersRx <-chan network.Orders,
 				floor = sensor
 				motor.Stop()
 				lights.Set(config.INDICATE, floor)
-				lights.Clear_floor(floor)
+
 				fmt.Printf("Arrived at %d \n", floor)
 				state = "idle"
 				order_handling.New_floor_reached(floor)
@@ -93,7 +97,7 @@ func Fsm(id int, ordersTx chan<- network.Orders, ordersRx <-chan network.Orders,
 	}
 }
 
-func check_buttons_and_update_orders(id int, updateTx chan<- network.Update) {
+func check_buttons_and_update_orders(id int, updateTx chan<- network.Update, score_responseRx <-chan [2]int) {
 	for button_type_i := 0; button_type_i <= config.DOWN; button_type_i++ {
 		for floor_i := 1; floor_i <= config.NUMFLOORS; floor_i++ {
 			if buttons.Get(button_type_i, floor_i) {
@@ -102,13 +106,14 @@ func check_buttons_and_update_orders(id int, updateTx chan<- network.Update) {
 
 					if button_type_i == config.INTERNAL {
 						if order_handling.Insert(floor_i, button_type_i, id) {
-							fmt.Println("orderinserted")
+							update_order(id, button_type_i, floor_i, id, updateTx, score_responseRx)
 						}
 					} else {
-						order_handling.Insert(floor_i, button_type_i, order_handling.NO_EXECUTER)
+						if order_handling.Insert(floor_i, button_type_i, order_handling.NO_EXECUTER) {
+							new_order(id, button_type_i, floor_i, updateTx, score_responseRx)
+						}
 					}
 					order_handling.Print_order_matrix()
-					updateTx <- network.Update{floor_i, button_type_i, order_handling.NO_EXECUTER, id}
 				}
 			}
 		}
@@ -139,7 +144,6 @@ func check_network(id int, ordersTx chan<- network.Orders, ordersRx <-chan netwo
 
 			str := fmt.Sprintf("Order update at floor %d of type ", d.Floor)
 			if d.From_id != id {
-				order_handling.Insert(d.Floor, d.Button_type, d.Executer)
 				if d.Button_type == config.INTERNAL {
 					str += "INT  "
 					temp_internal_order := peers_internal_orders[d.Executer]
@@ -147,10 +151,8 @@ func check_network(id int, ordersTx chan<- network.Orders, ordersRx <-chan netwo
 					peers_internal_orders[d.Executer] = temp_internal_order
 				} else if d.Button_type == config.UP {
 					str += "UP   "
-					order_handling.Insert(d.Floor, d.Button_type, d.Executer)
 				} else {
 					str += "DOWN "
-					order_handling.Insert(d.Floor, d.Button_type, d.Executer)
 				}
 				if d.Executer == order_handling.NO_EXECUTER {
 					str += "Order is without executer\n"
@@ -159,10 +161,8 @@ func check_network(id int, ordersTx chan<- network.Orders, ordersRx <-chan netwo
 				} else {
 					str += fmt.Sprintf("Order handled by: %d\n", d.Executer)
 				}
-				if d.From_id != id {
-					if order_handling.Insert(d.Floor, d.Button_type, d.Executer) {
-						messageTx <- network.Message{d.From_id, id, network.ORDERS_RESPONSE_T, order_handling.Get_cost(d.Floor, d.Button_type)}
-					}
+				if order_handling.Insert(d.Floor, d.Button_type, d.Executer) {
+					messageTx <- network.Message{d.From_id, id, network.ORDERS_RESPONSE_T, order_handling.Get_cost(d.Floor, d.Button_type)}
 				}
 			}
 			fmt.Printf(str)
@@ -171,7 +171,7 @@ func check_network(id int, ordersTx chan<- network.Orders, ordersRx <-chan netwo
 				fmt.Printf("Received: %d\n", f.Content)
 				if f.Type == network.SCORE_RESPONSE_T {
 					score_responseRx <- [2]int{f.From_id, f.Content}
-				} else if f.Type == network.SCORE_RESPONSE_T {
+				} else if f.Type == network.ORDER_RESPONSE_T {
 					orders_responseRx <- f.From_id
 				}
 			}
@@ -182,12 +182,50 @@ func check_network(id int, ordersTx chan<- network.Orders, ordersRx <-chan netwo
 func update_order(id int, button_type int, floor int, handler int, updateTx chan<- network.Update, score_responseRx <-chan [2]int) {
 	for i := 0; i < tries_to_send; i++ {
 		updateTx <- network.Update{floor, button_type, handler, id}
-		select {
-		case a := <-score_responseRx:
-			fmt.Printf("Received score of %d, from %d \n", a[0], a[1])
-		case <-time.After(time_to_respond):
-			break
+		pending_peers := make([]int, len(peers))
+		copy(pending_peers, peers)
+		for len(pending_peers) != 0 {
+			select {
+			case a := <-score_responseRx:
+				fmt.Printf("Received score of %d, from %d \n", a[0], a[1])
+				for i := 0; i < len(pending_peers); i++ {
+					if pending_peers[i] == a[1] {
+						pending_peers = append(pending_peers[:i], pending_peers[i+1:]...)
+					}
+				}
+			case <-time.After(time_to_respond):
+				break
+			}
 		}
+	}
+}
+
+func new_order(id int, button_type int, floor int, updateTx chan<- network.Update, score_responseRx <-chan [2]int) {
+	for i := 0; i < tries_to_send; i++ {
+		updateTx <- network.Update{floor, button_type, order_handling.NO_EXECUTER, id}
+		lowest_cost := 1000
+		has_lowestcost := 0
+		pending_peers := make([]int, len(peers))
+		copy(pending_peers, peers)
+		for len(pending_peers) != 0 {
+			select {
+			case a := <-score_responseRx:
+				fmt.Printf("Received score for new order of %d, from %d \n", a[0], a[1])
+				if a[1] < lowest_cost {
+					lowest_cost = a[1]
+					has_lowestcost = a[0]
+				}
+				for i := 0; i < len(pending_peers); i++ {
+					if pending_peers[i] == a[1] {
+						pending_peers = append(pending_peers[:i], pending_peers[i+1:]...)
+					}
+				}
+			case <-time.After(time_to_respond):
+				return
+			}
+		}
+		order_handling.Insert(floor, button_type, has_lowestcost)
+		update_order(id, button_type, floor, has_lowestcost, updateTx, score_responseRx)
 	}
 }
 

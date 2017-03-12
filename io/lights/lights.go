@@ -8,15 +8,13 @@ import (
 
 func Init() error {
 	for i := 1; i < config.NUMFLOORS; i++ {
-		for j := 0; j < config.NUMLIGHTS; j++ {
-			Clear(j, i)
-		}
+		Clear_floor(i)
 	}
 	return nil
 }
 
 func Clear_floor(floor int) {
-	for i := 1; i < config.NUMBUTTON_TYPES; i++ {
+	for i := 0; i < config.NUMBUTTON_TYPES; i++ {
 		Clear(i, floor)
 	}
 }

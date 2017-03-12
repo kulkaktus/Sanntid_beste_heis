@@ -149,6 +149,7 @@ func Get_next(state string) (next_order_at_floor int) {
 		endpoints = [2]int{config.NUMFLOORS, 1}
 	}
 	//Iterates from nextfloor to end in last direction, then from end to end in opposite direction, then back to, but not including, start
+	//fmt.Printf("last_floor %d iterator_dir %d\n", last_floor, iterator_dir)
 	for floor_i := last_floor; floor_i != endpoints[1]+iterator_dir; floor_i += iterator_dir {
 		button_type_i = config.INTERNAL
 		if order_matrix[floor_i-1][button_type_i] == self || order_matrix[floor_i-1][button_type_i] == NO_EXECUTER {
@@ -216,7 +217,7 @@ func Get_order_matrix() [config.NUMFLOORS][config.NUMBUTTON_TYPES]int {
 
 func Clear_order(destination int) {
 	for button_type_i := 0; button_type_i < config.NUMBUTTON_TYPES; button_type_i++ {
-		if order_is_valid(destination, button_type_i) {
+		if order_is_in_bounds(destination, button_type_i) {
 			order_matrix[destination-1][button_type_i] = NO_ORDER
 		}
 	}
@@ -258,4 +259,8 @@ func order_is_valid(destination int, button_type int) bool {
 	}
 
 	return true
+}
+
+func order_is_in_bounds(destination int, button_type int) bool {
+	return destination <= config.NUMFLOORS && destination > 0 && button_type >= 0 && button_type < config.NUMBUTTON_TYPES
 }
