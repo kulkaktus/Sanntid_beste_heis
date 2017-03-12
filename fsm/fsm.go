@@ -17,6 +17,7 @@ import (
 
 var floor int
 var peers []int
+var peers_internal_orders map[int][config.NUMFLOORS]int
 
 const (
 	tries_to_send   = 5
@@ -27,16 +28,21 @@ const (
 
 func Fsm(id int, ordersTx chan<- network.Orders, ordersRx <-chan network.Orders, updateTx chan<- network.Update, updateRx <-chan network.Update, messageTx chan<- network.Message, messageRx <-chan network.Message) {
 	doors_open_since := time.Hour
-	floor = sensors.Get()
-	fmt.Printf("Started at floor %d\n", floor)
 	state := "idle"
+	peers_internal_orders = make(map[int][config.NUMFLOORS]int)
 	score_responseRx := make(chan [2]int)
 	orders_responseRx := make(chan int)
+	motor.Go(config.DOWN)
+	for sensors.Get() == 0 {
+	}
+	motor.Stop()
+	floor = sensors.Get()
+	fmt.Printf("Started at floor %d\n", floor)
 	go check_network(id, ordersTx, ordersRx, updateTx, updateRx, messageTx, messageRx, score_responseRx, orders_responseRx)
 	for {
 		check_buttons_and_update_orders(id, updateTx)
 
-		current_order_floor, _ /*current_order_type*/ := order_handling.Get_next(state)
+		current_order_floor := order_handling.Get_next(state)
 		if current_order_floor == sensors.Get() {
 			doors_open_since = 0
 			motor.Stop()
@@ -67,7 +73,7 @@ func check_buttons_and_update_orders(id int, updateTx chan<- network.Update) {
 					fmt.Println("orderinserted")
 					order_handling.Print_order_array()
 					order_handling.Insert(floor_i, button_type_i)
-					updateTx <- network.Update{floor_i, button_type_i, id}
+					updateTx <- network.Update{floor_i, button_type_i, 0, id}
 				}
 				/*go func() {
 					order := order_handling.Order{floor_i, button_type_i, ""}
@@ -104,8 +110,12 @@ func check_network(id int, ordersTx chan<- network.Orders, ordersRx <-chan netwo
 			str := fmt.Sprintf("Order update at floor %d of type ", d.Floor)
 			if d.Button_type == config.INTERNAL {
 				str += "INT  "
+				temp_internal_order := peers_internal_orders[d.Executer]
+				temp_internal_order[d.Floor] = d.Executer
+				peers_internal_orders[d.Executer] = temp_internal_order
 			} else if d.Button_type == config.UP {
 				str += "UP   "
+				order_handling.Assign_order_executer(d.Floor, d.Button_type, d.Executer)
 			} else {
 				str += "DOWN "
 			}
@@ -130,9 +140,9 @@ func check_network(id int, ordersTx chan<- network.Orders, ordersRx <-chan netwo
 	}
 }
 
-func update_order(button_type int, floor int, handler int, updateTx chan<- network.Update, score_responseRx <-chan [2]int) {
+func update_order(id int, button_type int, floor int, handler int, updateTx chan<- network.Update, score_responseRx <-chan [2]int) {
 	for i := 0; i < tries_to_send; i++ {
-		updateTx <- network.Update{floor, button_type, handler}
+		updateTx <- network.Update{floor, button_type, handler, id}
 		select {
 		case a := <-score_responseRx:
 			fmt.Printf("Received score of %d, from %d \n", a[0], a[1])

@@ -30,6 +30,7 @@ type Update struct {
 	Floor       int
 	Button_type int
 	Executer    int
+	From_id     int
 }
 
 type Message struct {

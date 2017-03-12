@@ -134,9 +134,10 @@ func Assign_order_executer(destination int, button_type int, executer_id int) {
 	}
 }
 
-func Get_next(state string) (destination int, button_type int) {
+func Get_next(state string) int {
 	var next_floor int
 	var iterator_dir int
+	var button_type_i int
 	if state == "running" && last_direction == config.UP {
 		next_floor = last_floor + 1
 	} else if state == "running" && last_direction == config.DOWN {
@@ -150,40 +151,54 @@ func Get_next(state string) (destination int, button_type int) {
 		iterator_dir = -1
 	}
 	var endpoints [2]int
-	if iterator_dir == 1{
-		endpoints = {0, config.NUMFLOORS - 1}
-	}else{
-		endpoints = {config.NUMFLOORS - 1, 0}
+	if iterator_dir == 1 {
+		endpoints = [2]int{0, config.NUMFLOORS - 1}
+	} else {
+		endpoints = [2]int{config.NUMFLOORS - 1, 0}
 	}
 	//Iterates from nextfloor to end in last direction, then from end to end in opposite direction, then back to, but not including, start
-	for floor_i := next_floor; floor_i != endpoints[1]; floor_i += iterator_dir {
-		button_type_i := config.INTERNAL;
-		if order_list[floor_i%config.NUMFLOORS][button_type_i] == self {
-			return floor_i + 1, button_type_i
+	for floor_i := next_floor; floor_i != endpoints[1]+iterator_dir; floor_i += iterator_dir {
+		button_type_i = config.INTERNAL
+		if order_list[floor_i][button_type_i] == self || order_list[floor_i][button_type_i] == ORDER_WITHOUT_EXECUTER {
+			return floor_i + 1
 		}
 		button_type_i = last_direction
-		if order_list[floor_i%config.NUMFLOORS][button_type_i] == self {
-			return floor_i + 1, button_type_i
+		if order_list[floor_i][button_type_i] == self || order_list[floor_i][button_type_i] == ORDER_WITHOUT_EXECUTER {
+			return floor_i + 1
 		}
 	}
-	button_type_i -= iterator_dir //Swap direction of button type
+	button_type_i += iterator_dir //Swap direction of button type
 
-	for floor_i := endpoints[1]; floor_i != endpoints[0]; floor_i -= iterator_dir {
-		if order_list[floor_i%config.NUMFLOORS][button_type_i] == self {
-			return floor_i + 1, button_type_i
+	for floor_i := endpoints[1]; floor_i != endpoints[0]-iterator_dir; floor_i -= iterator_dir {
+		if order_list[floor_i][button_type_i] == self {
+			return floor_i + 1
 		}
 	}
 	for floor_i := endpoints[0]; floor_i != next_floor; floor_i += iterator_dir {
-		button_type_i := config.INTERNAL;
-		if order_list[floor_i%config.NUMFLOORS][button_type_i] == self {
-			return floor_i + 1, button_type_i
+		button_type_i = config.INTERNAL
+		if order_list[floor_i][button_type_i] == self {
+			return floor_i + 1
 		}
 		button_type_i = last_direction
-		if order_list[floor_i%config.NUMFLOORS][button_type_i] == self {
-			return floor_i + 1, button_type_i
+		if order_list[floor_i][button_type_i] == self {
+			return floor_i + 1
 		}
 	}
-	return 0, 0
+	//Iterates from end to end in opposite direction, then back to, but not including, start
+	button_type_i += iterator_dir //Swap direction of button type
+
+	for floor_i := endpoints[1]; floor_i != endpoints[0]-iterator_dir; floor_i -= iterator_dir {
+		if order_list[floor_i][button_type_i] == ORDER_WITHOUT_EXECUTER {
+			return floor_i + 1
+		}
+	}
+	for floor_i := endpoints[0]; floor_i != next_floor; floor_i += iterator_dir {
+		button_type_i = last_direction
+		if order_list[floor_i][button_type_i] == ORDER_WITHOUT_EXECUTER {
+			return floor_i + 1
+		}
+	}
+	return 0
 }
 
 func New_floor_reached(floor int) bool {
