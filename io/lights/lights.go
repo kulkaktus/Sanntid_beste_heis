@@ -15,9 +15,10 @@ func Init() error {
 	return nil
 }
 
-func Clear_floor(floor int){
-	for i := 1; i < config.NUMBUTTONS; i++ {
+func Clear_floor(floor int) {
+	for i := 1; i < config.NUMBUTTON_TYPES; i++ {
 		Clear(i, floor)
+	}
 }
 
 func Set(type_ int, floor int) error {

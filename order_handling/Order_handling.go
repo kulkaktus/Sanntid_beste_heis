@@ -7,7 +7,7 @@ import (
 	"math"
 )
 
-/*Her har jeg initialisert last_direction = config.DOWN, dvs at den ved initialisering
+/*Her har jeg initialisert direction = config.DOWN, dvs at den ved initialisering
 vil kjøre NEDOVER til nærmeste etasje. Når den er blitt initialisert, er det viktig å
 kjøre funksjonen arrived at floor, slik at man ikke ender opp med siste kjøreretning
 nedover i første etasje, det kan by på problemer. En annen måte å gjøre det på er å
@@ -22,7 +22,7 @@ var underlying_order_matrix [config.NUMFLOORS][config.NUMBUTTON_TYPES]int
 var order_matrix [][config.NUMBUTTON_TYPES]int // Matrix on the form [floor][button_type]
 
 var last_floor int
-var last_direction int
+var direction int
 
 var self int
 
@@ -35,7 +35,7 @@ func Init(self_id int) {
 	}
 	self = self_id
 	last_floor = 2
-	last_direction = config.DOWN
+	direction = config.DOWN
 }
 
 func Merge_order_matrices(new_order_matrix [config.NUMFLOORS][config.NUMBUTTON_TYPES]int) {
@@ -51,10 +51,14 @@ func Merge_order_matrices(new_order_matrix [config.NUMFLOORS][config.NUMBUTTON_T
 func Insert(destination int, button_type int, executer_id int) bool {
 
 	if order_is_valid(destination, button_type) {
-		order_matrix[destination-1][button_type] = NO_EXECUTER
+		order_matrix[destination-1][button_type] = executer_id
 		return true
 	}
 	return false
+}
+
+func Set_direction(new_direction int) {
+	direction = new_direction
 }
 
 func Print_order_matrix() {
@@ -111,12 +115,12 @@ func Print_order_struct(order_struct network.Orders) {
 
 func Get_cost(destination int, button_type int, state string) (cost int) {
 	var next_floor int
-	if state == "running" && last_direction == config.UP {
+	if state == "running" && direction == config.UP {
 		next_floor = last_floor + 1
 		if destination < next_floor {
 			cost += config.DIRECTION_CHANGE_COST
 		}
-	} else if state == "running" && last_direction == config.DOWN {
+	} else if state == "running" && direction == config.DOWN {
 		next_floor = last_floor - 1
 		if destination > next_floor {
 			cost += config.DIRECTION_CHANGE_COST
@@ -129,68 +133,64 @@ func Get_cost(destination int, button_type int, state string) (cost int) {
 	return cost
 }
 
-func Get_next(state string) int {
-	var next_floor int
+func Get_next(state string) (next_order_at_floor int) {
+
 	var iterator_dir int
 	var button_type_i int
-	if state == "running" && last_direction == config.UP && last_floor != config.NUMFLOORS {
-		next_floor = last_floor
-	} else if state == "running" && last_direction == config.DOWN && last_floor != 1 {
-		next_floor = last_floor - 2
-	} else {
-		next_floor = last_floor - 1
-	}
-	if last_direction == config.UP {
+
+	if direction == config.UP {
 		iterator_dir = 1
 	} else {
 		iterator_dir = -1
 	}
 	var endpoints [2]int
 	if iterator_dir == 1 {
-		endpoints = [2]int{0, config.NUMFLOORS - 1}
+		endpoints = [2]int{1, config.NUMFLOORS}
 	} else {
-		endpoints = [2]int{config.NUMFLOORS - 1, 0}
+		endpoints = [2]int{config.NUMFLOORS, 1}
 	}
 	//Iterates from nextfloor to end in last direction, then from end to end in opposite direction, then back to, but not including, start
-	for floor_i := next_floor; floor_i != endpoints[1]+iterator_dir; floor_i += iterator_dir {
+	for floor_i := last_floor; floor_i != endpoints[1]+iterator_dir; floor_i += iterator_dir {
 		button_type_i = config.INTERNAL
-		if order_matrix[floor_i][button_type_i] == self || order_matrix[floor_i][button_type_i] == NO_EXECUTER {
-			return floor_i + 1
+		if order_matrix[floor_i-1][button_type_i] == self || order_matrix[floor_i-1][button_type_i] == NO_EXECUTER {
+			return floor_i
 		}
-		button_type_i = last_direction
-		if order_matrix[floor_i][button_type_i] == self || order_matrix[floor_i][button_type_i] == NO_EXECUTER {
-			return floor_i + 1
+		button_type_i = direction
+		if order_matrix[floor_i-1][button_type_i] == self || order_matrix[floor_i-1][button_type_i] == NO_EXECUTER {
+			return floor_i
 		}
 	}
+	button_type_i = direction
 	button_type_i += iterator_dir //Swap direction of button type
 
 	for floor_i := endpoints[1]; floor_i != endpoints[0]-iterator_dir; floor_i -= iterator_dir {
-		if order_matrix[floor_i][button_type_i] == self {
-			return floor_i + 1
+		if order_matrix[floor_i-1][button_type_i] == self {
+			return floor_i
 		}
 	}
-	for floor_i := endpoints[0]; floor_i != next_floor; floor_i += iterator_dir {
+	for floor_i := endpoints[0]; floor_i != last_floor; floor_i += iterator_dir {
 		button_type_i = config.INTERNAL
-		if order_matrix[floor_i][button_type_i] == self {
-			return floor_i + 1
+		if order_matrix[floor_i-1][button_type_i] == self {
+			return floor_i
 		}
-		button_type_i = last_direction
-		if order_matrix[floor_i][button_type_i] == self {
-			return floor_i + 1
+		button_type_i = direction
+		if order_matrix[floor_i-1][button_type_i] == self {
+			return floor_i
 		}
 	}
+	button_type_i = direction
 	//Iterates from end to end in opposite direction, then back to, but not including, start
 	button_type_i += iterator_dir //Swap direction of button type
 
 	for floor_i := endpoints[1]; floor_i != endpoints[0]-iterator_dir; floor_i -= iterator_dir {
-		if order_matrix[floor_i][button_type_i] == NO_EXECUTER {
-			return floor_i + 1
+		if order_matrix[floor_i-1][button_type_i] == NO_EXECUTER {
+			return floor_i
 		}
 	}
-	for floor_i := endpoints[0]; floor_i != next_floor; floor_i += iterator_dir {
-		button_type_i = last_direction
-		if order_matrix[floor_i][button_type_i] == NO_EXECUTER {
-			return floor_i + 1
+	for floor_i := endpoints[0]; floor_i != last_floor; floor_i += iterator_dir {
+		button_type_i = direction
+		if order_matrix[floor_i-1][button_type_i] == NO_EXECUTER {
+			return floor_i
 		}
 	}
 	return 0
@@ -198,17 +198,9 @@ func Get_next(state string) int {
 
 func New_floor_reached(floor int) bool {
 	last_floor = floor
-	if (floor == 1) || (floor > last_floor) {
-		last_direction = config.UP
-		fmt.Printf("Going UPwards\n")
-	} else if (floor == config.NUMFLOORS) || (floor < last_floor) {
-		last_direction = config.DOWN
-		fmt.Printf("Going DOWNwards\n")
-	}
-
-	if (order_matrix[floor-1][last_direction] == self) || (order_matrix[floor-1][config.INTERNAL] == self) {
+	if (order_matrix[floor-1][direction] == self) || (order_matrix[floor-1][config.INTERNAL] == self) {
 		return true
-	} else if order_matrix[floor-1][last_direction] == NO_EXECUTER {
+	} else if order_matrix[floor-1][direction] == NO_EXECUTER {
 		return true
 	} else {
 		return false

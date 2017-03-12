@@ -43,18 +43,20 @@ func Fsm(id int, ordersTx chan<- network.Orders, ordersRx <-chan network.Orders,
 	for {
 		check_buttons_and_update_orders(id, updateTx)
 
-		current_order_floor := order_handling.Get_next(state)
-		fmt.Println(state)
+		//current_order_floor := order_handling.Get_next(state)
 		switch state {
 		case "idle":
+			current_order_floor := order_handling.Get_next(state)
 			if current_order_floor == 0 {
 				motor.Stop()
 				state = "idle"
 			} else if current_order_floor < floor {
 				motor.Go(config.DOWN)
+				order_handling.Set_direction(config.DOWN)
 				state = "running"
 			} else if current_order_floor > floor {
 				motor.Go(config.UP)
+				order_handling.Set_direction(config.UP)
 				state = "running"
 			} else if current_order_floor == floor {
 				motor.Stop()
@@ -64,16 +66,18 @@ func Fsm(id int, ordersTx chan<- network.Orders, ordersRx <-chan network.Orders,
 			}
 
 		case "running":
-			if sensors.Get() != 0 && sensors.Get() != floor {
+			sensor := sensors.Get()
+			if sensor != 0 && sensor != floor {
+				floor = sensor
 				motor.Stop()
 				lights.Set(config.INDICATE, floor)
 				fmt.Printf("Arrived at %d \n", floor)
 				state = "idle"
 				order_handling.New_floor_reached(floor)
-				floor = sensors.Get()
+
 			}
 		case "door_open":
-			fmt.Println(time.Since(doors_open_since))
+			//fmt.Println(time.Since(doors_open_since))
 			if time.Since(doors_open_since) < doors_open_for {
 				lights.Set(config.DOOR, 0)
 			} else {
@@ -93,10 +97,16 @@ func check_buttons_and_update_orders(id int, updateTx chan<- network.Update) {
 			if buttons.Get(button_type_i, floor_i) {
 				lights.Set(button_type_i, floor_i)
 				if !order_handling.Already_exists(floor_i, button_type_i) {
-					fmt.Println("orderinserted")
+
+					if button_type_i == config.INTERNAL {
+						if order_handling.Insert(floor_i, button_type_i, id) {
+							fmt.Println("orderinserted")
+						}
+					} else {
+						order_handling.Insert(floor_i, button_type_i, order_handling.NO_EXECUTER)
+					}
 					order_handling.Print_order_matrix()
-					order_handling.Insert(floor_i, button_type_i, order_handling.NO_EXECUTER)
-					updateTx <- network.Update{floor_i, button_type_i, 0, id}
+					updateTx <- network.Update{floor_i, button_type_i, order_handling.NO_EXECUTER, id}
 				}
 			} else {
 				lights.Clear(button_type_i, floor_i)
@@ -117,26 +127,32 @@ func check_network(id int, ordersTx chan<- network.Orders, ordersRx <-chan netwo
 		case b := <-ordersRx:
 			order_handling.Print_order_struct(b)
 		case d := <-updateRx:
-			order_handling.Insert(d.Floor, 0, d.Executer)
+
 			str := fmt.Sprintf("Order update at floor %d of type ", d.Floor)
-			if d.Button_type == config.INTERNAL {
-				str += "INT  "
-				temp_internal_order := peers_internal_orders[d.Executer]
-				temp_internal_order[d.Floor] = d.Executer
-				peers_internal_orders[d.Executer] = temp_internal_order
-			} else if d.Button_type == config.UP {
-				str += "UP   "
+			if d.From_id != id {
 				order_handling.Insert(d.Floor, d.Button_type, d.Executer)
-			} else {
-				str += "DOWN "
-				order_handling.Insert(d.Floor, d.Button_type, d.Executer)
-			}
-			if d.Executer == -1 {
-				str += "Order is without executer\n"
-			} else if d.Executer == 0 {
-				str += "Order cleared\n"
-			} else {
-				str += fmt.Sprintf("Order handled by: %d\n", d.Executer)
+				if d.Button_type == config.INTERNAL {
+					str += "INT  "
+					temp_internal_order := peers_internal_orders[d.Executer]
+					temp_internal_order[d.Floor-1] = d.Executer
+					peers_internal_orders[d.Executer] = temp_internal_order
+				} else if d.Button_type == config.UP {
+					str += "UP   "
+					order_handling.Insert(d.Floor, d.Button_type, d.Executer)
+				} else {
+					str += "DOWN "
+					order_handling.Insert(d.Floor, d.Button_type, d.Executer)
+				}
+				if d.Executer == order_handling.NO_EXECUTER {
+					str += "Order is without executer\n"
+				} else if d.Executer == order_handling.NO_ORDER {
+					str += "Order cleared\n"
+				} else {
+					str += fmt.Sprintf("Order handled by: %d\n", d.Executer)
+				}
+				if d.From_id != id {
+					order_handling.Insert(d.Floor, d.Button_type, d.Executer)
+				}
 			}
 			fmt.Printf(str)
 		case f := <-messageRx:
