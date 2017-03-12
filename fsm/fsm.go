@@ -101,7 +101,6 @@ func check_buttons_and_update_orders(id int, updateTx chan<- network.Update, sco
 	for button_type_i := 0; button_type_i <= config.DOWN; button_type_i++ {
 		for floor_i := 1; floor_i <= config.NUMFLOORS; floor_i++ {
 			if buttons.Get(button_type_i, floor_i) {
-				lights.Set(button_type_i, floor_i)
 				if !order_handling.Already_exists(floor_i, button_type_i) {
 
 					if button_type_i == config.INTERNAL {
@@ -251,6 +250,22 @@ func send_orders(id int, to_id int, orders [config.NUMFLOORS][config.NUMBUTTON_T
 			}
 		case <-time.After(time_to_respond):
 			break
+		}
+	}
+}
+
+
+func update_lights(){
+	order_matrix := order_handling.Get_order_matrix()
+
+	for floor_i := 0; floor_i < config.NUMFLOORS i++{
+		for button_type_i := 0; button_type_i < config.NUMBUTTON_TYPES; button_type_i++ {
+			if order_matrix[i][j] == order_handling.NO_ORDER {
+				lights.Clear(button_type_i, floor_i)
+			}else{
+				lights.Set(button_type_i, floor_i)
+
+			}
 		}
 	}
 }
