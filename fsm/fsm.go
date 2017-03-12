@@ -23,7 +23,7 @@ const (
 	tries_to_send   = 5
 	time_to_respond = 50 * time.Millisecond
 
-	doors_open_for = 3 * time.Second
+	doors_open_for = 1 * time.Second
 )
 
 func Fsm(id int, ordersTx chan<- network.Orders, ordersRx <-chan network.Orders, updateTx chan<- network.Update, updateRx <-chan network.Update, messageTx chan<- network.Message, messageRx <-chan network.Message) {
@@ -38,13 +38,13 @@ func Fsm(id int, ordersTx chan<- network.Orders, ordersRx <-chan network.Orders,
 	motor.Stop()
 	floor = sensors.Get()
 	fmt.Printf("Started at floor %d\n", floor)
+	order_handling.New_floor_reached(floor)
 	go check_network(id, ordersTx, ordersRx, updateTx, updateRx, messageTx, messageRx, score_responseRx, orders_responseRx)
 	for {
 		check_buttons_and_update_orders(id, updateTx)
 
 		current_order_floor := order_handling.Get_next(state)
 		fmt.Println(state)
-		order_handling.Print_order_array()
 		switch state {
 		case "idle":
 			if current_order_floor == 0 {
@@ -60,16 +60,20 @@ func Fsm(id int, ordersTx chan<- network.Orders, ordersRx <-chan network.Orders,
 				motor.Stop()
 				doors_open_since = time.Now()
 				state = "door_open"
+				order_handling.Clear_order(floor)
 			}
 
 		case "running":
 			if sensors.Get() != 0 && sensors.Get() != floor {
-				floor = sensors.Get()
 				motor.Stop()
 				lights.Set(config.INDICATE, floor)
 				fmt.Printf("Arrived at %d \n", floor)
+				state = "idle"
+				order_handling.New_floor_reached(floor)
+				floor = sensors.Get()
 			}
 		case "door_open":
+			fmt.Println(time.Since(doors_open_since))
 			if time.Since(doors_open_since) < doors_open_for {
 				lights.Set(config.DOOR, 0)
 			} else {
@@ -90,8 +94,8 @@ func check_buttons_and_update_orders(id int, updateTx chan<- network.Update) {
 				lights.Set(button_type_i, floor_i)
 				if !order_handling.Already_exists(floor_i, button_type_i) {
 					fmt.Println("orderinserted")
-					order_handling.Print_order_array()
-					order_handling.Insert(floor_i, button_type_i)
+					order_handling.Print_order_matrix()
+					order_handling.Insert(floor_i, button_type_i, order_handling.NO_EXECUTER)
 					updateTx <- network.Update{floor_i, button_type_i, 0, id}
 				}
 			} else {
@@ -113,7 +117,7 @@ func check_network(id int, ordersTx chan<- network.Orders, ordersRx <-chan netwo
 		case b := <-ordersRx:
 			order_handling.Print_order_struct(b)
 		case d := <-updateRx:
-			order_handling.Assign_order_executer(d.Floor, 0, d.Executer)
+			order_handling.Insert(d.Floor, 0, d.Executer)
 			str := fmt.Sprintf("Order update at floor %d of type ", d.Floor)
 			if d.Button_type == config.INTERNAL {
 				str += "INT  "
@@ -122,10 +126,10 @@ func check_network(id int, ordersTx chan<- network.Orders, ordersRx <-chan netwo
 				peers_internal_orders[d.Executer] = temp_internal_order
 			} else if d.Button_type == config.UP {
 				str += "UP   "
-				order_handling.Assign_order_executer(d.Floor, d.Button_type, d.Executer)
+				order_handling.Insert(d.Floor, d.Button_type, d.Executer)
 			} else {
 				str += "DOWN "
-				order_handling.Assign_order_executer(d.Floor, d.Button_type, d.Executer)
+				order_handling.Insert(d.Floor, d.Button_type, d.Executer)
 			}
 			if d.Executer == -1 {
 				str += "Order is without executer\n"

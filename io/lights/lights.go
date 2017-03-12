@@ -7,7 +7,17 @@ import (
 )
 
 func Init() error {
+	for i := 1; i < config.NUMFLOORS; i++ {
+		for j := 0; j < config.NUMLIGHTS; j++ {
+			Clear(j, i)
+		}
+	}
 	return nil
+}
+
+func Clear_floor(floor int){
+	for i := 1; i < config.NUMBUTTONS; i++ {
+		Clear(i, floor)
 }
 
 func Set(type_ int, floor int) error {

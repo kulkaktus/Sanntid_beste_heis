@@ -17,6 +17,7 @@ const (
 	NUMFLOORS       = 4
 	NUMELEVATORS    = 3
 	NUMBUTTON_TYPES = 3
+	NUMLIGHTS       = 6
 )
 
 const (

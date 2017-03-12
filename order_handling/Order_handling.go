@@ -7,15 +7,15 @@ import (
 	"math"
 )
 
-Her har jeg initialisert last_direction = config.DOWN, dvs at den ved initialisering
+/*Her har jeg initialisert last_direction = config.DOWN, dvs at den ved initialisering
 vil kjøre NEDOVER til nærmeste etasje. Når den er blitt initialisert, er det viktig å
 kjøre funksjonen arrived at floor, slik at man ikke ender opp med siste kjøreretning
 nedover i første etasje, det kan by på problemer. En annen måte å gjøre det på er å
-ta inn første etasjen man når i init-funksjonen som parameter
+ta inn første etasjen man når i init-funksjonen som parameter*/
 
 const (
-	ORDER_WITHOUT_EXECUTER = 0
-	NO_ORDER               = -1
+	NO_EXECUTER = 0
+	NO_ORDER    = -1
 )
 const NUMBUTTON_TYPES = 3
 
@@ -35,13 +35,14 @@ func Init(self_id int) {
 		}
 	}
 	self = self_id
+	last_floor = 2
 	last_direction = config.DOWN
 }
 
 func Merge_order_matrices(new_order_matrix [config.NUMFLOORS][NUMBUTTON_TYPES]int) {
 	for i := 0; i < config.NUMFLOORS; i++ {
 		for j := 1; j < NUMBUTTON_TYPES; j++ {
-			if order_mat[rixi][j] < new_order_matrix[i][j] {
+			if order_matrix[i][j] < new_order_matrix[i][j] {
 				order_matrix[i][j] = new_order_matrix[i][j]
 			}
 		}
@@ -51,7 +52,7 @@ func Merge_order_matrices(new_order_matrix [config.NUMFLOORS][NUMBUTTON_TYPES]in
 func Insert(destination int, button_type int, executer_id int) bool {
 
 	if order_is_valid(destination, button_type) {
-		order_matrix[destination-1][button_type] = ORDER_WITHOUT_EXECUTER
+		order_matrix[destination-1][button_type] = NO_EXECUTER
 		return true
 	}
 	return false
@@ -71,7 +72,7 @@ func Print_order_matrix() {
 			} else {
 				str += "DOWN "
 			}
-			if underlying_order_matrix[i][j] == ORDER_WITHOUT_EXECUTER {
+			if underlying_order_matrix[i][j] == NO_EXECUTER {
 				str += "Order without executer\n"
 			} else if underlying_order_matrix[i][j] == NO_ORDER {
 				str += "No order\n"
@@ -83,7 +84,7 @@ func Print_order_matrix() {
 	}
 }
 
-/*func Print_order_struct(order_struct network.Orders) {
+func Print_order_struct(order_struct network.Orders) {
 
 	for i := 0; i < config.NUMFLOORS; i++ {
 		for j := 0; j < 3; j++ {
@@ -97,7 +98,7 @@ func Print_order_matrix() {
 			} else {
 				str += "DOWN "
 			}
-			if order_struct.Orders[i][j] == ORDER_WITHOUT_EXECUTER {
+			if order_struct.Orders[i][j] == NO_EXECUTER {
 				str += "Order without executer\n"
 			} else if order_struct.Orders[i][j] == NO_ORDER {
 				str += "No order\n"
@@ -108,7 +109,7 @@ func Print_order_matrix() {
 		}
 	}
 }
-*/
+
 func Get_cost(destination int, button_type int, state string) (cost int) {
 	var next_floor int
 	if state == "running" && last_direction == config.UP {
@@ -133,12 +134,12 @@ func Get_next(state string) int {
 	var next_floor int
 	var iterator_dir int
 	var button_type_i int
-	if state == "running" && last_direction == config.UP {
-		next_floor = last_floor + 1
-	} else if state == "running" && last_direction == config.DOWN {
-		next_floor = last_floor - 1
-	} else {
+	if state == "running" && last_direction == config.UP && last_floor != config.NUMFLOORS {
 		next_floor = last_floor
+	} else if state == "running" && last_direction == config.DOWN && last_floor != 1 {
+		next_floor = last_floor - 2
+	} else {
+		next_floor = last_floor - 1
 	}
 	if last_direction == config.UP {
 		iterator_dir = 1
@@ -154,11 +155,11 @@ func Get_next(state string) int {
 	//Iterates from nextfloor to end in last direction, then from end to end in opposite direction, then back to, but not including, start
 	for floor_i := next_floor; floor_i != endpoints[1]+iterator_dir; floor_i += iterator_dir {
 		button_type_i = config.INTERNAL
-		if order_matrix[floor_i][button_type_i] == self || order_matrix[floor_i][button_type_i] == ORDER_WITHOUT_EXECUTER {
+		if order_matrix[floor_i][button_type_i] == self || order_matrix[floor_i][button_type_i] == NO_EXECUTER {
 			return floor_i + 1
 		}
 		button_type_i = last_direction
-		if order_matrix[floor_i][button_type_i] == self || order_matrix[floor_i][button_type_i] == ORDER_WITHOUT_EXECUTER {
+		if order_matrix[floor_i][button_type_i] == self || order_matrix[floor_i][button_type_i] == NO_EXECUTER {
 			return floor_i + 1
 		}
 	}
@@ -183,13 +184,13 @@ func Get_next(state string) int {
 	button_type_i += iterator_dir //Swap direction of button type
 
 	for floor_i := endpoints[1]; floor_i != endpoints[0]-iterator_dir; floor_i -= iterator_dir {
-		if order_matrix[floor_i][button_type_i] == ORDER_WITHOUT_EXECUTER {
+		if order_matrix[floor_i][button_type_i] == NO_EXECUTER {
 			return floor_i + 1
 		}
 	}
 	for floor_i := endpoints[0]; floor_i != next_floor; floor_i += iterator_dir {
 		button_type_i = last_direction
-		if order_matrix[floor_i][button_type_i] == ORDER_WITHOUT_EXECUTER {
+		if order_matrix[floor_i][button_type_i] == NO_EXECUTER {
 			return floor_i + 1
 		}
 	}
@@ -206,9 +207,9 @@ func New_floor_reached(floor int) bool {
 		fmt.Printf("Going DOWNwards\n")
 	}
 
-	if (order_matrix[floor][last_direction] == self) || (order_matrix[floor][config.INTERNAL] == self) {
+	if (order_matrix[floor-1][last_direction] == self) || (order_matrix[floor-1][config.INTERNAL] == self) {
 		return true
-	} else if order_matrix[floor][last_direction] == ORDER_WITHOUT_EXECUTER {
+	} else if order_matrix[floor-1][last_direction] == NO_EXECUTER {
 		return true
 	} else {
 		return false
@@ -223,15 +224,15 @@ func Get_order_matrix() [config.NUMFLOORS][NUMBUTTON_TYPES]int {
 	return underlying_order_matrix
 }
 
-func Clear_order(destination int, button_type int) {
-	order_matrix[destination-1][button_type] = NO_ORDER
+func Clear_order(destination int) {
+	for button_type_i := 0; button_type_i < NUMBUTTON_TYPES; button_type_i++ {
+		order_matrix[destination-1][button_type_i] = NO_ORDER
+	}
 }
 
 func Clear_order_matrix() {
 	for i := 0; i < config.NUMFLOORS; i++ {
-		for j := 0; j < NUMBUTTON_TYPES; j++ {
-			Clear_order(i, j)
-		}
+		Clear_order(i)
 	}
 }
 
