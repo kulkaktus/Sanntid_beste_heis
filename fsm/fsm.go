@@ -106,7 +106,9 @@ func check_buttons_and_update_orders(id int, updateTx chan<- network.Update, sco
 					if button_type_i == config.INTERNAL {
 						if !order_handling.Already_exists(floor_i, button_type_i) {
 							if order_handling.Insert(floor_i, button_type_i, id) {
-								update_order(id, button_type_i, floor_i, id, updateTx, score_responseRx)
+								if update_order(id, button_type_i, floor_i, id, updateTx, score_responseRx) {
+									order_handling.Insert(floor_i, button_type_i, id)
+								}
 							}
 						}
 					} else {
@@ -183,7 +185,7 @@ func message_manager(id int, ordersTx chan<- network.Orders, ordersRx <-chan net
 	}
 }
 
-func update_order(id int, button_type int, floor int, handler int, updateTx chan<- network.Update, score_responseRx <-chan [2]int) {
+func update_order(id int, button_type int, floor int, handler int, updateTx chan<- network.Update, score_responseRx <-chan [2]int) bool {
 	for i := 0; i < tries_to_send; i++ {
 		updateTx <- network.Update{floor, button_type, handler, id}
 		pending_peers := make([]int, len(peers))
@@ -198,19 +200,21 @@ func update_order(id int, button_type int, floor int, handler int, updateTx chan
 					}
 				}
 			case <-time.After(time_to_respond):
-				return
+				return false
 			}
 		}
-		return
+		return true
 	}
+	return false
 }
 
-func new_order(id int, button_type int, floor int, updateTx chan<- network.Update, score_responseRx <-chan [2]int) {
-	for i := 0; i < tries_to_send; i++ {
+func new_order(id int, button_type int, floor int, updateTx chan<- network.Update, score_responseRx <-chan [2]int) bool {
+	pending_peers := make([]int, len(peers))
+	copy(pending_peers, peers)
+	lowest_cost := order_handling.Get_cost(floor, button_type)
+	has_lowestcost := id
+	for i := 0; i < tries_to_send && len(pending_peers) != 0; i++ {
 		updateTx <- network.Update{floor, button_type, order_handling.NO_EXECUTER, id}
-		lowest_cost := order_handling.Get_cost(floor, button_type)
-		has_lowestcost := id
-		pending_peers := make([]int, len(peers))
 		copy(pending_peers, peers)
 		for len(pending_peers) != 0 {
 			select {
@@ -226,12 +230,16 @@ func new_order(id int, button_type int, floor int, updateTx chan<- network.Updat
 					}
 				}
 			case <-time.After(time_to_respond):
-				return
+				return false
 			}
 		}
+	}
+	if len(pending_peers) == 0 {
 		order_handling.Insert(floor, button_type, has_lowestcost)
 		update_order(id, button_type, floor, has_lowestcost, updateTx, score_responseRx)
-		return
+		return true //Skal returnere true uavhengig av update_order sin returverdi
+	} else {
+		return false
 	}
 }
 
