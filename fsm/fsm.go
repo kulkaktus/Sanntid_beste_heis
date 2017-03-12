@@ -44,6 +44,7 @@ func Fsm(id int, ordersTx chan<- network.Orders, ordersRx <-chan network.Orders,
 	if id == 101 {
 		time.Sleep(time.Hour)
 	}
+	hesitate := true
 	for {
 		check_buttons_and_update_orders(id, updateTx, score_responseRx)
 		order_handling.State = state
@@ -55,17 +56,28 @@ func Fsm(id int, ordersTx chan<- network.Orders, ordersRx <-chan network.Orders,
 			if current_order_floor == 0 {
 				motor.Stop()
 				state = "idle"
+			} else if hesitate == true {
+				time.Sleep(70 * time.Millisecond)
+				hesitate = false
 			} else if current_order_floor < floor {
 				motor.Go(config.DOWN)
 				order_handling.Set_direction(config.DOWN)
-				update_order(id, config.UP, current_order_floor, id, updateTx, score_responseRx)
-				update_order(id, config.DOWN, current_order_floor, id, updateTx, score_responseRx)
+				if order_handling.Already_exists(current_order_floor, config.UP) {
+					update_order(id, config.UP, current_order_floor, id, updateTx, score_responseRx)
+				}
+				if order_handling.Already_exists(current_order_floor, config.DOWN) {
+					update_order(id, config.DOWN, current_order_floor, id, updateTx, score_responseRx)
+				}
 				state = "running"
 			} else if current_order_floor > floor {
 				motor.Go(config.UP)
 				order_handling.Set_direction(config.UP)
-				update_order(id, config.UP, floor, handler, updateTx, score_responseRx)
-				update_order(id, config.DOWN, floor, handler, updateTx, score_responseRx)
+				if order_handling.Already_exists(current_order_floor, config.UP) {
+					update_order(id, config.UP, current_order_floor, id, updateTx, score_responseRx)
+				}
+				if order_handling.Already_exists(current_order_floor, config.DOWN) {
+					update_order(id, config.DOWN, current_order_floor, id, updateTx, score_responseRx)
+				}
 				state = "running"
 			} else if current_order_floor == floor {
 				motor.Stop()
@@ -78,6 +90,7 @@ func Fsm(id int, ordersTx chan<- network.Orders, ordersRx <-chan network.Orders,
 				if order_handling.Order_is_valid(floor, config.DOWN) {
 					update_order(id, config.DOWN, floor, order_handling.NO_ORDER, updateTx, score_responseRx)
 				}
+				hesitate = true
 			}
 
 		case "running":
@@ -184,6 +197,7 @@ func message_manager(id int, ordersTx chan<- network.Orders, ordersRx <-chan net
 					str += fmt.Sprintf("Order handled by: %d\n", d.Executer)
 				}
 				if order_handling.Insert(d.Floor, d.Button_type, d.Executer) {
+					fmt.Println("sendt my cost")
 					messageTx <- network.Message{d.From_id, id, network.SCORE_RESPONSE_T, order_handling.Get_cost(d.Floor, d.Button_type)}
 				}
 			}
