@@ -16,14 +16,15 @@ import (
 
 const network_port string = ":40012"
 const (
-	SCORE_RESPONSE_T  = iota
-	ORDERS_RESPONSE_T = iota
+	SCORE_RESPONSE_T  = 123
+	ORDERS_RESPONSE_T = 321
 )
 
 var broadcast_ip string
 
 type Orders struct {
-	Orders [config.NUMFLOORS][config.NUMBUTTON_TYPES]int
+	Orders  [config.NUMFLOORS][config.NUMBUTTON_TYPES]int
+	From_id int
 }
 
 type Update struct {

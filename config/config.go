@@ -27,6 +27,10 @@ const (
 )
 
 const (
+	UPDATE_REPLY = 321
+	ORDERS_REPLY = 123
+)
+const (
 	Motor_speed = 2800
 )
 

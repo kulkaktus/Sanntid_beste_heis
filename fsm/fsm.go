@@ -18,6 +18,7 @@ import (
 var floor int
 var peers []int
 var peers_internal_orders map[int][config.NUMFLOORS]int
+var state string
 
 const (
 	tries_to_send   = 5
@@ -28,7 +29,7 @@ const (
 
 func Fsm(id int, ordersTx chan<- network.Orders, ordersRx <-chan network.Orders, updateTx chan<- network.Update, updateRx <-chan network.Update, messageTx chan<- network.Message, messageRx <-chan network.Message) {
 	doors_open_since := time.Now().Add(-time.Hour)
-	state := "idle"
+	state = "idle"
 	peers_internal_orders = make(map[int][config.NUMFLOORS]int)
 	score_responseRx := make(chan [2]int)
 	orders_responseRx := make(chan int)
@@ -42,7 +43,7 @@ func Fsm(id int, ordersTx chan<- network.Orders, ordersRx <-chan network.Orders,
 	go check_network(id, ordersTx, ordersRx, updateTx, updateRx, messageTx, messageRx, score_responseRx, orders_responseRx)
 	for {
 		check_buttons_and_update_orders(id, updateTx)
-
+		order_handling.State = state
 		//current_order_floor := order_handling.Get_next(state)
 		switch state {
 		case "idle":
@@ -125,7 +126,16 @@ func check_network(id int, ordersTx chan<- network.Orders, ordersRx <-chan netwo
 			fmt.Printf("  New:      %d\n", p.New)
 			fmt.Printf("  Lost:     %d\n", p.Lost)
 		case b := <-ordersRx:
-			order_handling.Print_order_struct(b)
+			if b.From_id != id {
+				order_handling.Print_external_order_matrix(b.Orders)
+				order_handling.Merge_order_matrices(b.Orders)
+				var temp_internal_orders [4]int
+				for i := 0; i < config.NUMFLOORS; i++ {
+					temp_internal_orders[i] = b.Orders[i][0]
+				}
+				peers_internal_orders[b.From_id] = temp_internal_orders
+				messageTx <- network.Message{b.From_id, id, network.ORDERS_RESPONSE_T, 0}
+			}
 		case d := <-updateRx:
 
 			str := fmt.Sprintf("Order update at floor %d of type ", d.Floor)
@@ -151,7 +161,9 @@ func check_network(id int, ordersTx chan<- network.Orders, ordersRx <-chan netwo
 					str += fmt.Sprintf("Order handled by: %d\n", d.Executer)
 				}
 				if d.From_id != id {
-					order_handling.Insert(d.Floor, d.Button_type, d.Executer)
+					if order_handling.Insert(d.Floor, d.Button_type, d.Executer) {
+						messageTx <- network.Message{d.From_id, id, network.ORDERS_RESPONSE_T, order_handling.Get_cost(d.Floor, d.Button_type)}
+					}
 				}
 			}
 			fmt.Printf(str)
@@ -174,6 +186,22 @@ func update_order(id int, button_type int, floor int, handler int, updateTx chan
 		select {
 		case a := <-score_responseRx:
 			fmt.Printf("Received score of %d, from %d \n", a[0], a[1])
+		case <-time.After(time_to_respond):
+			break
+		}
+	}
+}
+
+func send_orders(id int, to_id int, orders [config.NUMFLOORS][config.NUMBUTTON_TYPES]int, ordersTx chan<- network.Orders, orders_responseRx <-chan int) {
+	for i, v := range peers_internal_orders[to_id] {
+		orders[i][0] = v
+	}
+
+	for i := 0; i < tries_to_send; i++ {
+		ordersTx <- network.Orders{orders, id}
+		select {
+		case a := <-orders_responseRx:
+			fmt.Printf("Received ack of orders from %d\n", a)
 		case <-time.After(time_to_respond):
 			break
 		}

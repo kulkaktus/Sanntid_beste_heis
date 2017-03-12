@@ -2,7 +2,6 @@ package order_handling
 
 import (
 	"../config"
-	"../network"
 	"fmt"
 	"math"
 )
@@ -23,7 +22,7 @@ var order_matrix [][config.NUMBUTTON_TYPES]int // Matrix on the form [floor][but
 
 var last_floor int
 var direction int
-
+var State string
 var self int
 
 func Init(self_id int) {
@@ -87,7 +86,7 @@ func Print_order_matrix() {
 	}
 }
 
-func Print_order_struct(order_struct network.Orders) {
+func Print_external_order_matrix(orders [config.NUMFLOORS][config.NUMBUTTON_TYPES]int) {
 
 	for i := 0; i < config.NUMFLOORS; i++ {
 		for j := 0; j < 3; j++ {
@@ -101,26 +100,26 @@ func Print_order_struct(order_struct network.Orders) {
 			} else {
 				str += "DOWN "
 			}
-			if order_struct.Orders[i][j] == NO_EXECUTER {
+			if orders[i][j] == NO_EXECUTER {
 				str += "Order without executer\n"
-			} else if order_struct.Orders[i][j] == NO_ORDER {
+			} else if orders[i][j] == NO_ORDER {
 				str += "No order\n"
 			} else {
-				str += fmt.Sprintf("%d\n", order_struct.Orders[i][j])
+				str += fmt.Sprintf("%d\n", orders[i][j])
 			}
 			fmt.Printf(str)
 		}
 	}
 }
 
-func Get_cost(destination int, button_type int, state string) (cost int) {
+func Get_cost(destination int, button_type int) (cost int) {
 	var next_floor int
-	if state == "running" && direction == config.UP {
+	if State == "running" && direction == config.UP {
 		next_floor = last_floor + 1
 		if destination < next_floor {
 			cost += config.DIRECTION_CHANGE_COST
 		}
-	} else if state == "running" && direction == config.DOWN {
+	} else if State == "running" && direction == config.DOWN {
 		next_floor = last_floor - 1
 		if destination > next_floor {
 			cost += config.DIRECTION_CHANGE_COST
