@@ -216,12 +216,14 @@ func Get_order_matrix() [config.NUMFLOORS][config.NUMBUTTON_TYPES]int {
 
 func Clear_order(destination int) {
 	for button_type_i := 0; button_type_i < config.NUMBUTTON_TYPES; button_type_i++ {
-		order_matrix[destination-1][button_type_i] = NO_ORDER
+		if order_is_valid(destination, button_type_i) {
+			order_matrix[destination-1][button_type_i] = NO_ORDER
+		}
 	}
 }
 
 func Clear_order_matrix() {
-	for i := 0; i < config.NUMFLOORS; i++ {
+	for i := 1; i <= config.NUMFLOORS; i++ {
 		Clear_order(i)
 	}
 }
