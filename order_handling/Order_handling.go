@@ -207,10 +207,6 @@ func New_floor_reached(floor int) bool {
 	}
 }
 
-func Storage_test() {
-
-}
-
 func Get_order_matrix() [config.NUMFLOORS][config.NUMBUTTON_TYPES]int {
 	return underlying_order_matrix
 }
