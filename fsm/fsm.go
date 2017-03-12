@@ -27,7 +27,7 @@ const (
 )
 
 func Fsm(id int, ordersTx chan<- network.Orders, ordersRx <-chan network.Orders, updateTx chan<- network.Update, updateRx <-chan network.Update, messageTx chan<- network.Message, messageRx <-chan network.Message) {
-	doors_open_since := time.Hour
+	doors_open_since := time.Now().Add(-time.Hour)
 	state := "idle"
 	peers_internal_orders = make(map[int][config.NUMFLOORS]int)
 	score_responseRx := make(chan [2]int)
@@ -43,23 +43,42 @@ func Fsm(id int, ordersTx chan<- network.Orders, ordersRx <-chan network.Orders,
 		check_buttons_and_update_orders(id, updateTx)
 
 		current_order_floor := order_handling.Get_next(state)
-		if current_order_floor == sensors.Get() {
-			doors_open_since = 0
-			motor.Stop()
-			state = "door_open"
-		}
+		fmt.Println(state)
+		order_handling.Print_order_array()
 		switch state {
 		case "idle":
+			if current_order_floor == 0 {
+				motor.Stop()
+				state = "idle"
+			} else if current_order_floor < floor {
+				motor.Go(config.DOWN)
+				state = "running"
+			} else if current_order_floor > floor {
+				motor.Go(config.UP)
+				state = "running"
+			} else if current_order_floor == floor {
+				motor.Stop()
+				doors_open_since = time.Now()
+				state = "door_open"
+			}
 
 		case "running":
-
+			if sensors.Get() != 0 && sensors.Get() != floor {
+				floor = sensors.Get()
+				motor.Stop()
+				lights.Set(config.INDICATE, floor)
+				fmt.Printf("Arrived at %d \n", floor)
+			}
 		case "door_open":
-			if doors_open_since < doors_open_for {
+			if time.Since(doors_open_since) < doors_open_for {
 				lights.Set(config.DOOR, 0)
+			} else {
+				lights.Clear(config.DOOR, 0)
+				state = "idle"
 			}
 
 		case "":
-
+			panic("No state in fsm")
 		}
 	}
 }
@@ -75,23 +94,11 @@ func check_buttons_and_update_orders(id int, updateTx chan<- network.Update) {
 					order_handling.Insert(floor_i, button_type_i)
 					updateTx <- network.Update{floor_i, button_type_i, 0, id}
 				}
-				/*go func() {
-					order := order_handling.Order{floor_i, button_type_i, ""}
-					if order_handling.Insert(order) {
-						//network.Send_order(order_handling.Get_cost(order), order, tx)
-					}
-				}()*/
 			} else {
 				lights.Clear(button_type_i, floor_i)
 			}
 		}
 	}
-	/*if floor != sensors.Get() && sensors.Get() != 0 {
-		motor.Stop()
-		floor = sensors.Get()
-		lights.Set(config.INDICATE, floor)
-		fmt.Printf("Arrived at %d \n", floor)
-	}*/
 }
 
 func check_network(id int, ordersTx chan<- network.Orders, ordersRx <-chan network.Orders, updateTx chan<- network.Update, updateRx <-chan network.Update, messageTx chan<- network.Message, messageRx <-chan network.Message, score_responseRx chan<- [2]int, orders_responseRx chan<- int) {
@@ -118,6 +125,7 @@ func check_network(id int, ordersTx chan<- network.Orders, ordersRx <-chan netwo
 				order_handling.Assign_order_executer(d.Floor, d.Button_type, d.Executer)
 			} else {
 				str += "DOWN "
+				order_handling.Assign_order_executer(d.Floor, d.Button_type, d.Executer)
 			}
 			if d.Executer == -1 {
 				str += "Order is without executer\n"
