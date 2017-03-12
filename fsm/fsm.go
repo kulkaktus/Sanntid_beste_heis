@@ -72,6 +72,7 @@ func Fsm(id int, ordersTx chan<- network.Orders, ordersRx <-chan network.Orders,
 				floor = sensor
 				motor.Stop()
 				lights.Set(config.INDICATE, floor)
+				lights.Clear_floor(floor)
 				fmt.Printf("Arrived at %d \n", floor)
 				state = "idle"
 				order_handling.New_floor_reached(floor)
@@ -109,8 +110,6 @@ func check_buttons_and_update_orders(id int, updateTx chan<- network.Update) {
 					order_handling.Print_order_matrix()
 					updateTx <- network.Update{floor_i, button_type_i, order_handling.NO_EXECUTER, id}
 				}
-			} else {
-				lights.Clear(button_type_i, floor_i)
 			}
 		}
 	}
