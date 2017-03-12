@@ -126,57 +126,62 @@ func Get_cost(destination int, button_type int, state string) (order_cost int) {
 				}
 			}
 		}
-	} else {
-		//Calculating scores for internal orders
-		if button_type == config.INTERNAL {
+	}
 
-			if last_direction == config.UP {
-				if destination > last_floor {
-					instance = 1
+	//Calculating scores for internal orders
+	if button_type == config.INTERNAL {
 
-				} else if destination <= last_floor {
-					instance = 3
-				}
-
-			} else if last_direction == config.DOWN {
-				if destination < last_floor {
-					instance = 1
-				} else if destination > last_floor {
-					instance = 2
-				}
-			}
-
-		} else if last_direction == config.UP {
-			if (destination > last_floor) && ((button_type == last_direction) || (destination == config.NUMFLOORS)) {
+		if last_direction == config.UP {
+			if destination > last_floor {
 				instance = 1
-			} else if button_type != last_direction {
+
+			} else if destination <= last_floor {
 				instance = 3
-			} else if (destination <= last_floor) && (button_type == last_direction) {
-				instance = 4
 			}
 
 		} else if last_direction == config.DOWN {
-			if (destination < last_floor) && ((button_type == last_direction) || (destination == 1)) {
+			if destination < last_floor {
 				instance = 1
-			} else if button_type != last_direction {
+			} else if destination > last_floor {
 				instance = 2
-			} else if (destination >= last_floor) && (button_type == last_direction) {
-				instance = 5
 			}
+		}
+
+	} else if last_direction == config.UP {
+		if (destination > last_floor) && ((button_type == last_direction) || (destination == config.NUMFLOORS)) {
+			instance = 1
+		} else if button_type != last_direction {
+			instance = 3
+		} else if (destination <= last_floor) && (button_type == last_direction) {
+			instance = 4
+		}
+
+	} else if last_direction == config.DOWN {
+		if (destination < last_floor) && ((button_type == last_direction) || (destination == 1)) {
+			instance = 1
+		} else if button_type != last_direction {
+			instance = 2
+		} else if (destination >= last_floor) && (button_type == last_direction) {
+			instance = 5
 		}
 	}
 
 	switch instance {
 	case 1:
 		distance += int(math.Abs(float64(destination - last_floor)))
+		fmt.Printf("CASE 1\n")
 	case 2:
 		distance += last_floor + destination
+		fmt.Printf("CASE 2\n")
 	case 3:
 		distance += 2*config.NUMFLOORS - last_floor - destination
+		fmt.Printf("CASE 3\n")
 	case 4:
 		distance += 2*config.NUMFLOORS + destination - last_floor - 1
+		fmt.Printf("CASE 4\n")
 	case 5:
 		distance += 2*config.NUMFLOORS + last_floor - destination - 1
+		fmt.Printf("CASE 5\n")
 	}
 
 	order_cost += config.DISTANCE_COST * distance
