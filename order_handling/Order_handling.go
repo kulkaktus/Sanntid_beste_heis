@@ -49,7 +49,7 @@ func Merge_order_matrices(new_order_matrix [config.NUMFLOORS][config.NUMBUTTON_T
 
 func Insert(destination int, button_type int, executer_id int) bool {
 
-	if order_is_valid(destination, button_type) {
+	if Order_is_valid(destination, button_type) {
 		order_matrix[destination-1][button_type] = executer_id
 		return true
 	}
@@ -232,7 +232,7 @@ func Already_exists(destination int, button_type int) bool {
 	return true
 }
 
-func order_is_valid(destination int, button_type int) bool {
+func Order_is_valid(destination int, button_type int) bool {
 
 	if (destination > config.NUMFLOORS) || (destination < 1) {
 		fmt.Printf("order_handling.FLOOR_ERROR, selected floor is %d, out of range\n", destination)
@@ -245,12 +245,12 @@ func order_is_valid(destination int, button_type int) bool {
 	}
 
 	if (destination == config.NUMFLOORS) && (button_type == config.UP) {
-		fmt.Printf("order_handling.ORDER_ERROR\nInvalid order, requested floor: NUMFLOORS, UP\n")
+		//fmt.Printf("order_handling.ORDER_ERROR\nInvalid order, requested floor: NUMFLOORS, UP\n")
 		return false
 	}
 
 	if (destination == 1) && (button_type == config.DOWN) {
-		fmt.Printf("order_handling.ORDER_ERROR\nInvalid order, requested floor: 1, DOWN\n")
+		//fmt.Printf("order_handling.ORDER_ERROR\nInvalid order, requested floor: 1, DOWN\n")
 		return false
 	}
 

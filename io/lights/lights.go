@@ -10,6 +10,8 @@ func Init() error {
 	for i := 1; i < config.NUMFLOORS; i++ {
 		Clear_floor(i)
 	}
+	Clear(config.STOP, 1)
+	Clear(config.DOOR, 1)
 	return nil
 }
 
