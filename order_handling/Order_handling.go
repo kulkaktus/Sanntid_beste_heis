@@ -17,10 +17,9 @@ const (
 	NO_EXECUTER = 0
 	NO_ORDER    = -1
 )
-const NUMBUTTON_TYPES = 3
 
-var underlying_order_matrix [config.NUMFLOORS][NUMBUTTON_TYPES]int
-var order_matrix [][NUMBUTTON_TYPES]int // Matrix on the form [floor][button_type]
+var underlying_order_matrix [config.NUMFLOORS][config.NUMBUTTON_TYPES]int
+var order_matrix [][config.NUMBUTTON_TYPES]int // Matrix on the form [floor][button_type]
 
 var last_floor int
 var last_direction int
@@ -30,7 +29,7 @@ var self int
 func Init(self_id int) {
 	order_matrix = underlying_order_matrix[:][:]
 	for i := 0; i < config.NUMFLOORS; i++ {
-		for j := 0; j < NUMBUTTON_TYPES; j++ {
+		for j := 0; j < config.NUMBUTTON_TYPES; j++ {
 			order_matrix[i][j] = -1
 		}
 	}
@@ -39,9 +38,9 @@ func Init(self_id int) {
 	last_direction = config.DOWN
 }
 
-func Merge_order_matrices(new_order_matrix [config.NUMFLOORS][NUMBUTTON_TYPES]int) {
+func Merge_order_matrices(new_order_matrix [config.NUMFLOORS][config.NUMBUTTON_TYPES]int) {
 	for i := 0; i < config.NUMFLOORS; i++ {
-		for j := 1; j < NUMBUTTON_TYPES; j++ {
+		for j := 1; j < config.NUMBUTTON_TYPES; j++ {
 			if order_matrix[i][j] < new_order_matrix[i][j] {
 				order_matrix[i][j] = new_order_matrix[i][j]
 			}
@@ -220,12 +219,12 @@ func Storage_test() {
 
 }
 
-func Get_order_matrix() [config.NUMFLOORS][NUMBUTTON_TYPES]int {
+func Get_order_matrix() [config.NUMFLOORS][config.NUMBUTTON_TYPES]int {
 	return underlying_order_matrix
 }
 
 func Clear_order(destination int) {
-	for button_type_i := 0; button_type_i < NUMBUTTON_TYPES; button_type_i++ {
+	for button_type_i := 0; button_type_i < config.NUMBUTTON_TYPES; button_type_i++ {
 		order_matrix[destination-1][button_type_i] = NO_ORDER
 	}
 }
@@ -250,7 +249,7 @@ func order_is_valid(destination int, button_type int) bool {
 		return false
 	}
 
-	if (button_type > NUMBUTTON_TYPES-1) || (button_type < 0) {
+	if (button_type > config.NUMBUTTON_TYPES-1) || (button_type < 0) {
 		fmt.Printf("order_handling.BUTTON_TYPE_ERROR:\nselected button type is %d, out of range\n", button_type)
 		return false
 	}
