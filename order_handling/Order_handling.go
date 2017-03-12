@@ -38,14 +38,14 @@ func Init(self_id int) {
 	last_direction = config.DOWN
 }
 
-func Merge_order_lists(new_list [config.NUMFLOORS][NUMBUTTON_TYPES]int){
-	for i:=0; i<config.NUMFLOORS; i++ {
-		for j:=1; j<NUMBUTTON_TYPES; j++ {
+func Merge_order_lists(new_list [config.NUMFLOORS][NUMBUTTON_TYPES]int) {
+	for i := 0; i < config.NUMFLOORS; i++ {
+		for j := 1; j < NUMBUTTON_TYPES; j++ {
 			if order_list[i][j] < new_list[i][j] {
 				order_list[i][j] = new_list[i][j]
 			}
 		}
-	}				
+	}
 }
 
 func Insert(destination int, button_type int) bool {
@@ -242,7 +242,7 @@ func Clear_all_orders() {
 }
 
 func Already_exists(destination int, button_type int) bool {
-	if order_list[destination-1][button_type] == 0 {
+	if order_list[destination-1][button_type] == NO_ORDER {
 		return false
 	}
 	return true
