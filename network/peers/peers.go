@@ -56,10 +56,6 @@ func Receiver(port int, id_self int, peerUpdateCh chan<- PeerUpdate) {
 		if err != nil {
 			id = 0
 		}
-		/*if id_ == "a" {
-			fmt.Println(n)
-		}*/
-		// Adding new connection
 		p.New = 0
 		if id != 0 && id != id_self {
 			if _, idExists := lastSeen[id]; !idExists {

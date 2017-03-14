@@ -3,14 +3,7 @@ package network
 import (
 	"../config"
 	"./bcast"
-	//"../conn"
-	//"../localip"
-	//"../order_handling"
 	"./peers"
-	//"fmt"
-	//"net"
-	//"sort"
-	//"strconv"
 	"time"
 )
 

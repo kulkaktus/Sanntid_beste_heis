@@ -3,15 +3,12 @@ package fsm
 import (
 	"../config"
 	"../io/buttons"
-	//"../io/io"
 	"../io/lights"
 	"../io/motor"
 	"../io/sensors"
 	"../network"
-	//"../network/peers"
 	"../order_handling"
 	"fmt"
-	//"os"
 	"time"
 )
 
@@ -43,9 +40,6 @@ func Fsm(id int, ordersTx chan<- network.Orders, ordersRx <-chan network.Orders,
 	fmt.Printf("Started at floor %d\n", floor)
 	order_handling.New_floor_reached(floor)
 	go message_manager(id, ordersTx, ordersRx, updateTx, updateRx, messageTx, messageRx, score_responseRx, orders_responseRx, orders_responseRx)
-	if id == 101 {
-		time.Sleep(time.Hour)
-	}
 	hesitate := true
 	for {
 		check_buttons_and_update_orders(id, updateTx, score_responseRx)
@@ -120,7 +114,6 @@ func Fsm(id int, ordersTx chan<- network.Orders, ordersRx <-chan network.Orders,
 				state = "stuck"
 			}
 		case "door_open":
-			//fmt.Println(time.Since(doors_open_since))
 			if time.Since(doors_open_since) < doors_open_for {
 				lights.Set(config.DOOR, 0)
 			} else {

@@ -17,10 +17,6 @@ import (
 	"time"
 )
 
-// We define some custom struct to send over the network.
-// Note that all members we want to transmit must be public. Any private members
-//  will be received as zero-values.
-
 func main() {
 	lights.Init()
 	peers.Init()
@@ -53,16 +49,10 @@ func main() {
 
 	}
 	fmt.Print("My id is: ", id, "\n")
+
 	order_handling.Init(id)
+
 	ordersTx, ordersRx, updateTx, updateRx, messageTx, messageRx := network.Init(id) //get transmit and receive channels
-	// The example message. We just send one of these every second.
-	/*go func() {
-		helloMsg := network.Message{"This is PATRICK!", id, 0}
-		for {
-			helloMsg.Iter++
-			tx <- helloMsg
-			time.Sleep(1 * time.Second)
-		}
-	}()*/
+
 	fsm.Fsm(id, ordersTx, ordersRx, updateTx, updateRx, messageTx, messageRx)
 }
