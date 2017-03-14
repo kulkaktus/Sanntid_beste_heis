@@ -323,18 +323,24 @@ func new_order(id int, button_type int, floor int, updateTx chan<- network.Updat
 func send_orders(id int, to_id int, orders [config.NUMFLOORS][config.NUMBUTTON_TYPES]int, ordersTx chan<- network.Orders, orders_responseRx <-chan int) {
 	for i, v := range peers_internal_orders[to_id] {
 		orders[i][0] = v
-		fmt.Println("sending all orders")
-		for i := 0; i < tries_to_send; i++ {
-			ordersTx <- network.Orders{orders, id}
+	}
+	fmt.Println("sending all orders")
+	for i := 0; i < tries_to_send; i++ {
+		ordersTx <- network.Orders{orders, id}
+	}
+	select {
+	case a := <-orders_responseRx:
+		if a == to_id {
+			fmt.Printf("Received ack of orders from %d\n", a)
+			break
 		}
-		select {
-		case a := <-orders_responseRx:
-			if a == to_id {
-				fmt.Printf("Received ack of orders from %d\n", a)
-				return
-			}
-		case <-time.After(time_to_respond):
-			return
+	case <-time.After(time_to_respond):
+		break
+	}
+	for {
+	_, not_empty := <-score_responseRx
+	if !not_empty {
+			break
 		}
 	}
 }
