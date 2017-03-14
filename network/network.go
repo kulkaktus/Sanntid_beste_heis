@@ -18,6 +18,7 @@ const network_port string = ":40012"
 const (
 	SCORE_RESPONSE_T  = 123
 	ORDERS_RESPONSE_T = 321
+	STUCK_SEND_T = 456
 )
 
 var broadcast_ip string

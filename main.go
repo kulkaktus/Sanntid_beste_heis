@@ -36,7 +36,7 @@ func main() {
 	time.Sleep(1 * time.Millisecond)
 	for {
 		if len(os.Args) <= 1 || err != nil {
-			fmt.Println("Enter id: ")
+			fmt.Println("Enter id as a unique positive integer: ")
 			id_in = ""
 			for id_in == "" {
 				fmt.Scanln(&id_in)
@@ -46,7 +46,9 @@ func main() {
 		}
 		id, err = strconv.Atoi(id_in)
 		if err == nil {
-			break
+			if id > 0{
+				break
+			}
 		}
 
 	}

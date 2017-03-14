@@ -1,9 +1,9 @@
 package buttons
 
 import (
-	"./../../config"
-	"./../channels"
-	"./../io"
+	"../../config"
+	"../channels"
+	"../io"
 )
 
 func Init() error {

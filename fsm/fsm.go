@@ -21,14 +21,15 @@ var peers_internal_orders map[int][config.NUMFLOORS]int
 var state string
 
 const (
-	tries_to_send   = 5
-	time_to_respond = 300 * time.Millisecond
-
+	tries_to_send   = 10
+	time_to_respond = 200 * time.Millisecond
+	time_threshold_motor_stuck = 5*time.Second
 	doors_open_for = 1 * time.Second
 )
 
 func Fsm(id int, ordersTx chan<- network.Orders, ordersRx <-chan network.Orders, updateTx chan<- network.Update, updateRx <-chan network.Update, messageTx chan<- network.Message, messageRx <-chan network.Message) {
 	doors_open_since := time.Now().Add(-time.Hour)
+	motor_on_since := time.Now().Add(-time.Hour)
 	state = "idle"
 	peers_internal_orders = make(map[int][config.NUMFLOORS]int)
 	score_responseRx := make(chan [2]int)
@@ -49,37 +50,39 @@ func Fsm(id int, ordersTx chan<- network.Orders, ordersRx <-chan network.Orders,
 		check_buttons_and_update_orders(id, updateTx, score_responseRx)
 		order_handling.State = state
 		update_lights()
-		//current_order_floor := order_handling.Get_next(state)
+		//current_order_destination := order_handling.Get_next(state)
 		switch state {
 		case "idle":
-			current_order_floor := order_handling.Get_next(state)
-			if current_order_floor == 0 {
+			current_order_destination := order_handling.Get_next(state)
+			if current_order_destination == 0 {
 				motor.Stop()
 				state = "idle"
 			} else if hesitate == true {
-				time.Sleep(70 * time.Millisecond)
+				time.Sleep(time_to_respond)
 				hesitate = false
-			} else if current_order_floor < floor {
+			} else if current_order_destination < floor {
 				motor.Go(config.DOWN)
 				order_handling.Set_direction(config.DOWN)
-				if order_handling.Already_exists(current_order_floor, config.UP) {
-					update_order(id, config.UP, current_order_floor, id, updateTx, score_responseRx)
+				if order_handling.Already_exists(current_order_destination, config.UP) {
+					update_order(id, config.UP, current_order_destination, id, updateTx, score_responseRx)
 				}
-				if order_handling.Already_exists(current_order_floor, config.DOWN) {
-					update_order(id, config.DOWN, current_order_floor, id, updateTx, score_responseRx)
+				if order_handling.Already_exists(current_order_destination, config.DOWN) {
+					update_order(id, config.DOWN, current_order_destination, id, updateTx, score_responseRx)
 				}
 				state = "running"
-			} else if current_order_floor > floor {
+				motor_on_since = time.Now()
+			} else if current_order_destination > floor {
 				motor.Go(config.UP)
 				order_handling.Set_direction(config.UP)
-				if order_handling.Already_exists(current_order_floor, config.UP) {
-					update_order(id, config.UP, current_order_floor, id, updateTx, score_responseRx)
+				if order_handling.Already_exists(current_order_destination, config.UP) {
+					update_order(id, config.UP, current_order_destination, id, updateTx, score_responseRx)
 				}
-				if order_handling.Already_exists(current_order_floor, config.DOWN) {
-					update_order(id, config.DOWN, current_order_floor, id, updateTx, score_responseRx)
+				if order_handling.Already_exists(current_order_destination, config.DOWN) {
+					update_order(id, config.DOWN, current_order_destination, id, updateTx, score_responseRx)
 				}
 				state = "running"
-			} else if current_order_floor == floor {
+				motor_on_since = time.Now()
+			} else if current_order_destination == floor {
 				motor.Stop()
 				doors_open_since = time.Now()
 				state = "door_open"
@@ -106,6 +109,10 @@ func Fsm(id int, ordersTx chan<- network.Orders, ordersRx <-chan network.Orders,
 
 			} else if sensor == floor && order_handling.Get_next(state) == 0 {
 				motor.Stop()
+			} else if time.Since(motor_on_since) < time_threshold_motor_stuck{
+				send_stuck_message(id, messageTx)
+				order_handling.Clear_orders_handled_by(id)
+				state = "stuck"
 			}
 		case "door_open":
 			//fmt.Println(time.Since(doors_open_since))
@@ -115,6 +122,16 @@ func Fsm(id int, ordersTx chan<- network.Orders, ordersRx <-chan network.Orders,
 				lights.Clear(config.DOOR, 0)
 				state = "idle"
 			}
+		case "stuck":
+			sensor := sensors.Get()
+			if sensor != 0 && sensor != floor {
+				floor = sensor
+				motor.Stop()
+				lights.Set(config.INDICATE, floor)
+				order_handling.New_floor_reached(floor)
+				fmt.Printf("Arrived at %d \n", floor)
+				state = "idle"
+				}
 
 		case "":
 			panic("No state in fsm")
@@ -209,6 +226,8 @@ func message_manager(id int, ordersTx chan<- network.Orders, ordersRx <-chan net
 					score_responseRx <- [2]int{f.From_id, f.Content}
 				} else if f.Type == network.ORDERS_RESPONSE_T {
 					orders_responseRx_out <- f.From_id
+				} else if f.Type == network.STUCK_SEND_T {
+					order_handling.Clear_orders_handled_by(f.From_id)
 				}
 			}
 		}
@@ -219,6 +238,7 @@ func message_manager(id int, ordersTx chan<- network.Orders, ordersRx <-chan net
 func update_order(id int, button_type int, floor int, handler int, updateTx chan<- network.Update, score_responseRx <-chan [2]int) bool {
 	for i := 0; i < tries_to_send; i++ {
 		updateTx <- network.Update{floor, button_type, handler, id}
+	}
 		pending_peers := make([]int, len(peers))
 		copy(pending_peers, peers)
 		for len(pending_peers) != 0 {
@@ -233,7 +253,6 @@ func update_order(id int, button_type int, floor int, handler int, updateTx chan
 			case <-time.After(time_to_respond):
 				return false
 			}
-		}
 		return true
 	}
 	return false
@@ -246,6 +265,7 @@ func new_order(id int, button_type int, floor int, updateTx chan<- network.Updat
 	has_lowestcost := id
 	for i := 0; i < tries_to_send && len(pending_peers) != 0; i++ {
 		updateTx <- network.Update{floor, button_type, order_handling.NO_EXECUTER, id}
+	}
 		for len(pending_peers) != 0 {
 			select {
 			case a := <-score_responseRx:
@@ -263,23 +283,24 @@ func new_order(id int, button_type int, floor int, updateTx chan<- network.Updat
 				return false
 			}
 		}
-	}
 	if len(pending_peers) == 0 {
-		order_handling.Insert(floor, button_type, has_lowestcost)
-		update_order(id, button_type, floor, has_lowestcost, updateTx, score_responseRx)
+		if update_order(id, button_type, floor, has_lowestcost, updateTx, score_responseRx){
+			order_handling.Insert(floor, button_type, has_lowestcost)
+		}
 		return true //Skal returnere true uavhengig av update_order sin returverdi
 	} else {
 		return false
 	}
 }
 
-func send_orders(id int, to_id int, orders [config.NUMFLOORS][config.NUMBUTTON_TYPES]int, ordersTx chan<- network.Orders, orders_responseRx <-chan int) {
+func send_orders(id int, to_id int, orders [config.NUMFLOORS][config.NUMBUTTON_TYPES]int, ordersTx chan<- network.Orders, orders_responseRx <-chan [2]int) {
 	for i, v := range peers_internal_orders[to_id] {
 		orders[i][0] = v
 	}
 
 	for i := 0; i < tries_to_send; i++ {
 		ordersTx <- network.Orders{orders, id}
+	}
 		select {
 		case a := <-orders_responseRx:
 			if a == to_id {
@@ -289,7 +310,6 @@ func send_orders(id int, to_id int, orders [config.NUMFLOORS][config.NUMBUTTON_T
 		case <-time.After(time_to_respond):
 			return
 		}
-	}
 }
 
 func update_lights() {
@@ -303,6 +323,16 @@ func update_lights() {
 				lights.Set(button_type_i, floor_i+1)
 
 			}
+		}
+	}
+}
+
+func send_stuck_message(id int, messageTx chan<- network.Message) {
+	pending_peers := make([]int, len(peers))
+	copy(pending_peers, peers)
+	for i := 0; i < tries_to_send; i++ {
+		for j := 0; j<len(pending_peers); j++{
+			messageTx <- network.Message{pending_peers[j], id, network.STUCK_SEND_T, 0}
 		}
 	}
 }
