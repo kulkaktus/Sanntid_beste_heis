@@ -124,7 +124,7 @@ func Get_cost(destination int, button_type int) (cost int) {
 		if destination > next_floor {
 			cost += config.DIRECTION_CHANGE_COST
 		}
-	}else if State == "stuck" {
+	} else if State == "stuck" {
 		next_floor = last_floor
 		cost += 10000
 	} else {
@@ -135,7 +135,7 @@ func Get_cost(destination int, button_type int) (cost int) {
 	return cost
 }
 
-func Get_next(state string) (next_order_at_floor int) {
+func Get_next() (next_order_at_floor int) {
 
 	var iterator_dir int
 	var button_type_i int
@@ -264,10 +264,10 @@ func order_is_in_bounds(destination int, button_type int) bool {
 	return destination <= config.NUMFLOORS && destination > 0 && button_type >= 0 && button_type < config.NUMBUTTON_TYPES
 }
 
-func Clear_orders_handled_by(id_of_stuck_elevator int){
+func Clear_orders_handled_by(id_of_stuck_elevator int) {
 	for i := 0; i < config.NUMFLOORS; i++ {
 		for j := 1; j < config.NUMBUTTON_TYPES; j++ {
-			if order_matrix[i][j] ==  id_of_stuck_elevator{
+			if order_matrix[i][j] == id_of_stuck_elevator {
 				order_matrix[i][j] = NO_EXECUTER
 			}
 		}
