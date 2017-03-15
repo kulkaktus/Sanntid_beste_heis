@@ -64,7 +64,7 @@ func Fsm(id int, ordersTx chan<- network.Orders, ordersRx <-chan network.Orders,
 				wait_for_order_assignment = true
 				state = "idle"
 			} else if wait_for_order_assignment == true {
-				time.Sleep(2 * time_to_respond)
+				time.Sleep(time_to_respond)
 				wait_for_order_assignment = false
 			} else if current_order_destination < floor {
 				motor.Move(config.DOWN)
@@ -179,12 +179,8 @@ func check_buttons_and_update_orders(id int, updateTx chan<- network.Update, sco
 }
 
 func message_manager(id int, ordersTx chan<- network.Orders, ordersRx <-chan network.Orders, updateTx chan<- network.Update, updateRx <-chan network.Update, messageTx chan<- network.Message, messageRx <-chan network.Message, score_responseRx chan<- [2]int, orders_responseRx_out chan<- int, orders_responseRx_in <-chan int) {
-	status_time_since := time.Now()
 	for {
-		if time.Second < time.Since(status_time_since) {
-			status_time_since = time.Now()
-			fmt.Println("network online")
-		}
+		fmt.Println("network online")
 		select {
 		case p := <-network.PeerUpdateCh:
 			peers = p.Peers
@@ -192,7 +188,9 @@ func message_manager(id int, ordersTx chan<- network.Orders, ordersRx <-chan net
 			fmt.Printf("  Peers:    %d\n", p.Peers)
 			fmt.Printf("  New:      %d\n", p.New)
 			fmt.Printf("  Lost:     %d\n", p.Lost)
-
+			if (len(p.Lost) != 0){
+				order_handling.Unassign_orders_handled_by(p.Lost[0])
+			}
 			if _, exists := peers_internal_orders[p.New]; !exists {
 				peers_internal_orders[p.New] = [4]int{order_handling.NO_ORDER, order_handling.NO_ORDER, order_handling.NO_ORDER, order_handling.NO_ORDER}
 			}
@@ -208,9 +206,9 @@ func message_manager(id int, ordersTx chan<- network.Orders, ordersRx <-chan net
 			var str string
 			if d.From_id != id {
 				if d.Button_type == config.INTERNAL {
-					temp_internal_order := peers_internal_orders[d.Executer]
+					temp_internal_order := peers_internal_orders[d.From_id]
 					temp_internal_order[d.Floor-1] = d.Executer
-					peers_internal_orders[d.Executer] = temp_internal_order
+					peers_internal_orders[d.From_id] = temp_internal_order
 				}
 
 				if order_handling.Insert(d.Floor, d.Button_type, d.Executer) {
@@ -282,6 +280,7 @@ func new_order(id int, button_type int, floor int, updateTx chan<- network.Updat
 			return false
 		}
 	}
+	fmt.Printf("Had lowest_cost %d\n",has_lowestcost)
 
 	for len(score_responseRx) > 0 {
 		<-score_responseRx

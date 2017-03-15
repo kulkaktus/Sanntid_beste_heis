@@ -76,14 +76,17 @@ func Get_cost(destination int, button_type int) (cost int) {
 		if destination > next_floor {
 			cost += config.DIRECTION_CHANGE_COST
 		}
-	} else if State == "idle" {
+	} else if State == "idle" || State == "door_open"{
 		next_floor = last_floor
 		cost += config.STARTUP_FROM_IDLE_COST
+		if(destination == next_floor){
+		cost = 0
+		}
 	} else if State == "stuck" {
 		next_floor = last_floor
 		cost += 10000
 	}
-	cost += config.DISTANCE_COST * int(math.Abs(float64(destination-last_floor)))
+	cost += config.DISTANCE_COST * int(math.Abs(float64(destination-next_floor)))
 
 	return cost
 }
