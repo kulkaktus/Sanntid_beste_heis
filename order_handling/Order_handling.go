@@ -115,8 +115,6 @@ func Get_next() (next_order_at_floor int) {
 		if order_matrix[floor_i-1][button_type_i] == self || order_matrix[floor_i-1][button_type_i] == NO_EXECUTER {
 			return floor_i
 		}
-	}
-	for floor_i := last_floor; floor_i != endpoints[1]+iterator_dir; floor_i += iterator_dir {
 		button_type_i = direction
 		if order_matrix[floor_i-1][button_type_i] == self || order_matrix[floor_i-1][button_type_i] == NO_EXECUTER {
 			return floor_i
@@ -164,7 +162,7 @@ func Get_order_matrix() [config.NUMFLOORS][config.NUMBUTTON_TYPES]int {
 
 func Merge_external_order_matrix_with_current(new_order_matrix [config.NUMFLOORS][config.NUMBUTTON_TYPES]int) {
 	for floor_i := 0; floor_i < config.NUMFLOORS; floor_i++ {
-		for button_type_i := 1; button_type_i < config.NUMBUTTON_TYPES; button_type_i++ {
+		for button_type_i := 0; button_type_i < config.NUMBUTTON_TYPES; button_type_i++ {
 			if order_matrix[floor_i][button_type_i] < new_order_matrix[floor_i][button_type_i] {
 				order_matrix[floor_i][button_type_i] = new_order_matrix[floor_i][button_type_i]
 			}
