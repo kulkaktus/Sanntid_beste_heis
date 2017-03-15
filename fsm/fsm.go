@@ -156,20 +156,15 @@ func check_buttons_and_update_orders(id int, updateTx chan<- network.Update, sco
 		for floor_i := 1; floor_i <= config.NUMFLOORS; floor_i++ {
 			if buttons.Get(button_type_i, floor_i) {
 				if !order_handling.Already_exists(floor_i, button_type_i) {
-
 					if button_type_i == config.INTERNAL {
-						if !order_handling.Already_exists(floor_i, button_type_i) {
-							if order_handling.Insert(floor_i, button_type_i, id) {
-								if update_order(id, button_type_i, floor_i, id, updateTx, score_responseRx) {
-									order_handling.Insert(floor_i, button_type_i, id)
-								}
+						if order_handling.Insert(floor_i, button_type_i, id) {
+							if update_order(id, button_type_i, floor_i, id, updateTx, score_responseRx) {
+								order_handling.Insert(floor_i, button_type_i, id)
 							}
 						}
 					} else {
-						if !order_handling.Already_exists(floor_i, button_type_i) {
-							if order_handling.Insert(floor_i, button_type_i, id) {
-								new_order(id, button_type_i, floor_i, updateTx, score_responseRx)
-							}
+						if order_handling.Insert(floor_i, button_type_i, id) {
+							new_order(id, button_type_i, floor_i, updateTx, score_responseRx)
 						}
 					}
 				}
@@ -180,7 +175,6 @@ func check_buttons_and_update_orders(id int, updateTx chan<- network.Update, sco
 
 func message_manager(id int, ordersTx chan<- network.Orders, ordersRx <-chan network.Orders, updateTx chan<- network.Update, updateRx <-chan network.Update, messageTx chan<- network.Message, messageRx <-chan network.Message, score_responseRx chan<- [2]int, orders_responseRx_out chan<- int, orders_responseRx_in <-chan int) {
 	for {
-		fmt.Println("network online")
 		select {
 		case p := <-network.PeerUpdateCh:
 			peers = p.Peers
@@ -203,7 +197,6 @@ func message_manager(id int, ordersTx chan<- network.Orders, ordersRx <-chan net
 				messageTx <- network.Message{b.From_id, id, network.ORDERS_RESPONSE_T, 0}
 			}
 		case d := <-updateRx:
-			var str string
 			if d.From_id != id {
 				if d.Button_type == config.INTERNAL {
 					temp_internal_order := peers_internal_orders[d.From_id]

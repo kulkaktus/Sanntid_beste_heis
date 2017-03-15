@@ -2,7 +2,6 @@ package order_handling
 
 import (
 	"../config"
-	"fmt"
 	"math"
 )
 
