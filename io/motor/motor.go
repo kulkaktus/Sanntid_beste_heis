@@ -11,7 +11,7 @@ func Init() {
 	io.Write_analog(channels.Motor_value, 0)
 }
 
-func Go(direction int) {
+func Move(direction int) {
 	if direction == config.UP {
 		io.Clear_bit(channels.Motor_dir)
 		io.Write_analog(channels.Motor_value, config.Motor_speed)

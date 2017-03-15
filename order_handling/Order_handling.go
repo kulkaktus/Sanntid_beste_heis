@@ -6,22 +6,17 @@ import (
 	"math"
 )
 
-/*Her har jeg initialisert direction = config.DOWN, dvs at den ved initialisering
-vil kjøre NEDOVER til nærmeste etasje. Når den er blitt initialisert, er det viktig å
-kjøre funksjonen arrived at floor, slik at man ikke ender opp med siste kjøreretning
-nedover i første etasje, det kan by på problemer. En annen måte å gjøre det på er å
-ta inn første etasjen man når i init-funksjonen som parameter*/
-
 const (
 	NO_EXECUTER = 0
 	NO_ORDER    = -1
 )
 
 var underlying_order_matrix [config.NUMFLOORS][config.NUMBUTTON_TYPES]int
-var order_matrix [][config.NUMBUTTON_TYPES]int // Matrix on the form [floor][button_type]
+var order_matrix [][config.NUMBUTTON_TYPES]int
 
 var last_floor int
 var direction int
+
 var State string
 var self int
 
@@ -39,7 +34,7 @@ func Init(self_id int) {
 }
 
 func Insert(destination int, button_type int, executer_id int) bool {
-	if Order_is_valid(destination, button_type) {
+	if order_is_in_bounds(destination, button_type) {
 		order_matrix[destination-1][button_type] = executer_id
 		return true
 	}
@@ -108,8 +103,8 @@ func Get_next() (next_order_at_floor int) {
 	} else {
 		endpoints = [2]int{config.NUMFLOORS, 1}
 	}
+
 	//Iterates from nextfloor to end in last direction, then from end to end in opposite direction, then back to, but not including, start
-	//fmt.Printf("last_floor %d iterator_dir %d\n", last_floor, iterator_dir)
 	for floor_i := last_floor; floor_i != endpoints[1]+iterator_dir; floor_i += iterator_dir {
 		button_type_i = config.INTERNAL
 		if order_matrix[floor_i-1][button_type_i] == self || order_matrix[floor_i-1][button_type_i] == NO_EXECUTER {
@@ -153,7 +148,7 @@ func Get_next() (next_order_at_floor int) {
 			return floor_i
 		}
 	}
-	return 0
+	return NO_ORDER
 }
 
 func Get_order_matrix() [config.NUMFLOORS][config.NUMBUTTON_TYPES]int {
@@ -180,79 +175,8 @@ func Unassign_orders_handled_by(id_of_stuck_elevator int) {
 	}
 }
 
-func Print_order_matrix() {
-	for i := 0; i < config.NUMFLOORS; i++ {
-		for j := 0; j < 3; j++ {
-			str := ""
-			str += fmt.Sprintf("Floor: %d ", i+1)
-
-			if j == config.INTERNAL {
-				str += "INT  "
-			} else if j == config.UP {
-				str += "UP   "
-			} else {
-				str += "DOWN "
-			}
-
-			if underlying_order_matrix[i][j] == NO_EXECUTER {
-				str += "Order without executer\n"
-			} else if underlying_order_matrix[i][j] == NO_ORDER {
-				str += "No order\n"
-			} else {
-				str += fmt.Sprintf("%d\n", underlying_order_matrix[i][j])
-			}
-			fmt.Printf(str)
-		}
-	}
-}
-
-func Print_external_order_matrix(orders [config.NUMFLOORS][config.NUMBUTTON_TYPES]int) {
-	for i := 0; i < config.NUMFLOORS; i++ {
-		for j := 0; j < 3; j++ {
-			str := ""
-			str += fmt.Sprintf("Floor: %d ", i+1)
-
-			if j == config.INTERNAL {
-				str += "INT  "
-			} else if j == config.UP {
-				str += "UP   "
-			} else {
-				str += "DOWN "
-			}
-
-			if orders[i][j] == NO_EXECUTER {
-				str += "Order without executer\n"
-			} else if orders[i][j] == NO_ORDER {
-				str += "No order\n"
-			} else {
-				str += fmt.Sprintf("%d\n", orders[i][j])
-			}
-			fmt.Printf(str)
-		}
-	}
-}
-
-func Order_is_valid(destination int, button_type int) bool {
-
-	if (destination > config.NUMFLOORS) || (destination < 1) {
-		fmt.Printf("order_handling.FLOOR_ERROR, selected floor is %d, out of range\n", destination)
-		return false
-	} else if (button_type > config.NUMBUTTON_TYPES-1) || (button_type < 0) {
-		fmt.Printf("order_handling.BUTTON_TYPE_ERROR:\nselected button type is %d, out of range\n", button_type)
-		return false
-	} else if (destination == config.NUMFLOORS) && (button_type == config.UP) {
-		//fmt.Printf("order_handling.ORDER_ERROR\nInvalid order, requested floor: NUMFLOORS, UP\n")
-		return false
-	} else if (destination == 1) && (button_type == config.DOWN) {
-		//fmt.Printf("order_handling.ORDER_ERROR\nInvalid order, requested floor: 1, DOWN\n")
-		return false
-	}
-
-	return true
-}
-
 func order_is_in_bounds(destination int, button_type int) bool {
-	return destination <= config.NUMFLOORS && destination > 0 && button_type >= 0 && button_type < config.NUMBUTTON_TYPES
+	return (destination <= config.NUMFLOORS) && (destination > 0) && (button_type >= 0) && (button_type < config.NUMBUTTON_TYPES)
 }
 
 func Already_exists(destination int, button_type int) bool {
