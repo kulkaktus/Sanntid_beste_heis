@@ -196,7 +196,7 @@ func message_manager(id int, ordersTx chan<- network.Orders, ordersRx <-chan net
 			if _, exists := peers_internal_orders[p.New]; !exists {
 				peers_internal_orders[p.New] = [4]int{order_handling.NO_ORDER, order_handling.NO_ORDER, order_handling.NO_ORDER, order_handling.NO_ORDER}
 			}
-			go send_orders(id, p.New, order_handling.Get_order_matrix(), ordersTx, orders_responseRx_in)
+			go send_orders(id, p.New, order_handling.Get_order_matrix(), ordersTx, orders_responseRx_in, score_responseRx)
 		case b := <-ordersRx:
 			if b.From_id != id {
 				order_handling.Print_external_order_matrix(b.Orders)
@@ -325,12 +325,12 @@ func new_order(id int, button_type int, floor int, updateTx chan<- network.Updat
 		return false
 	}
 }
-func send_orders(id int, to_id int, orders [config.NUMFLOORS][config.NUMBUTTON_TYPES]int, ordersTx chan<- network.Orders, orders_responseRx <-chan int) {
+func send_orders(id int, to_id int, orders [config.NUMFLOORS][config.NUMBUTTON_TYPES]int, ordersTx chan<- network.Orders, orders_responseRx <-chan int, score_responseRx <-chan [2]int) {
 	for i, v := range peers_internal_orders[to_id] {
 		orders[i][0] = v
 	}
 	fmt.Println("sending all orders")
-	for i := 0; i < tries_to_send; i++ {
+	for i := 0; i < send_attempts; i++ {
 		ordersTx <- network.Orders{orders, id}
 	}
 	select {

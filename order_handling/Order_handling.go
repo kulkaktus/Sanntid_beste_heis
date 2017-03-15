@@ -29,7 +29,7 @@ func Init(self_id int) {
 	order_matrix = underlying_order_matrix[:][:]
 	for floor_i := 0; floor_i < config.NUMFLOORS; floor_i++ {
 		for button_type_i := 0; button_type_i < config.NUMBUTTON_TYPES; button_type_i++ {
-			order_matrix[floor_i][button_type_j] = -1
+			order_matrix[floor_i][button_type_i] = -1
 		}
 	}
 
