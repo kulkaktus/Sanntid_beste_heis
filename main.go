@@ -18,6 +18,7 @@ import (
 )
 
 func main() {
+
 	lights.Init()
 	peers.Init()
 	config.Init()
@@ -25,11 +26,14 @@ func main() {
 	motor.Init()
 	sensors.Init()
 	io.Init()
+
 	var id_in string
 	var id int
 	var err error
 	err = nil
+
 	time.Sleep(1 * time.Millisecond)
+
 	for {
 		if len(os.Args) <= 1 || err != nil {
 			fmt.Println("Enter id as a unique positive integer: ")
@@ -42,7 +46,7 @@ func main() {
 		}
 		id, err = strconv.Atoi(id_in)
 		if err == nil {
-			if id > 0{
+			if id > 0 {
 				break
 			}
 		}

@@ -25,73 +25,83 @@ const (
 )
 
 func Fsm(id int, ordersTx chan<- network.Orders, ordersRx <-chan network.Orders, updateTx chan<- network.Update, updateRx <-chan network.Update, messageTx chan<- network.Message, messageRx <-chan network.Message) {
-	doors_open_since := time.Now().Add(-time.Hour)
-	motor_on_since := time.Now().Add(-time.Hour)
-	status_time_since := time.Now()
-	state = "idle"
 	peers_internal_orders = make(map[int][config.NUMFLOORS]int)
 	score_responseRx := make(chan [2]int)
 	orders_responseRx := make(chan int)
+
 	motor.Go(config.DOWN)
 	for sensors.Get() == 0 {
 	}
+
 	motor.Stop()
 	floor = sensors.Get()
 	fmt.Printf("Started at floor %d\n", floor)
-	order_handling.New_floor_reached(floor)
+	order_handling.Set_floor(floor)
 	go message_manager(id, ordersTx, ordersRx, updateTx, updateRx, messageTx, messageRx, score_responseRx, orders_responseRx, orders_responseRx)
-	hesitate := true
+
+	doors_open_since := time.Now().Add(-time.Hour)
+	motor_on_since := time.Now().Add(-time.Hour)
+	status_time_since := time.Now()
+
+	wait_for_order_assignment := true
+	state = "idle"
+
 	for {
-		check_buttons_and_update_orders(id, updateTx, score_responseRx)
 		order_handling.State = state
+		check_buttons_and_update_orders(id, updateTx, score_responseRx)
 		update_lights()
+
 		if time.Second < time.Since(status_time_since) {
 			status_time_since = time.Now()
 			fmt.Println(state)
 		}
+
 		switch state {
 		case "idle":
 			current_order_destination := order_handling.Get_next()
 			if current_order_destination == 0 {
 				motor.Stop()
 				state = "idle"
-			} else if hesitate == true {
+			} else if wait_for_order_assignment == true {
 				time.Sleep(2 * time_to_respond)
-				hesitate = false
+				wait_for_order_assignment = false
 			} else if current_order_destination < floor {
 				motor.Go(config.DOWN)
+				motor_on_since = time.Now()
 				order_handling.Set_direction(config.DOWN)
+				state = "running"
+
 				if order_handling.Already_exists(current_order_destination, config.UP) {
 					update_order(id, config.UP, current_order_destination, id, updateTx, score_responseRx)
 				}
 				if order_handling.Already_exists(current_order_destination, config.DOWN) {
 					update_order(id, config.DOWN, current_order_destination, id, updateTx, score_responseRx)
 				}
-				state = "running"
-				motor_on_since = time.Now()
 			} else if current_order_destination > floor {
 				motor.Go(config.UP)
+				motor_on_since = time.Now()
 				order_handling.Set_direction(config.UP)
+				state = "running"
+
 				if order_handling.Already_exists(current_order_destination, config.UP) {
 					update_order(id, config.UP, current_order_destination, id, updateTx, score_responseRx)
 				}
 				if order_handling.Already_exists(current_order_destination, config.DOWN) {
 					update_order(id, config.DOWN, current_order_destination, id, updateTx, score_responseRx)
 				}
-				state = "running"
-				motor_on_since = time.Now()
 			} else if current_order_destination == floor {
 				motor.Stop()
 				doors_open_since = time.Now()
+				order_handling.Clear_orders_in_floor(floor)
 				state = "door_open"
-				order_handling.Clear_order(floor)
+
 				if order_handling.Order_is_valid(floor, config.UP) {
 					update_order(id, config.UP, floor, order_handling.NO_ORDER, updateTx, score_responseRx)
 				}
 				if order_handling.Order_is_valid(floor, config.DOWN) {
 					update_order(id, config.DOWN, floor, order_handling.NO_ORDER, updateTx, score_responseRx)
 				}
-				hesitate = true
+				wait_for_order_assignment = true
 			}
 
 		case "running":
@@ -100,19 +110,19 @@ func Fsm(id int, ordersTx chan<- network.Orders, ordersRx <-chan network.Orders,
 				floor = sensor
 				motor.Stop()
 				lights.Set(config.INDICATE, floor)
+				order_handling.Set_floor(floor)
+				state = "idle"
 
 				fmt.Printf("Arrived at %d \n", floor)
-				state = "idle"
-				order_handling.New_floor_reached(floor)
-
 			} else if sensor == floor && order_handling.Get_next() == 0 {
 				motor.Stop()
 			} else if time.Since(motor_on_since) > time_threshold_motor_stuck {
 				send_stuck_message(id, messageTx)
-				order_handling.Clear_orders_handled_by(id)
-				fmt.Println("I am stuck")
+				order_handling.Unassign_orders_handled_by(id)
 				state = "stuck"
+				fmt.Println("I am stuck")
 			}
+
 		case "door_open":
 			if time.Since(doors_open_since) < doors_open_for {
 				lights.Set(config.DOOR, 0)
@@ -120,16 +130,18 @@ func Fsm(id int, ordersTx chan<- network.Orders, ordersRx <-chan network.Orders,
 				lights.Clear(config.DOOR, 0)
 				state = "idle"
 			}
+
 		case "stuck":
 			sensor := sensors.Get()
-			if sensor != 0 && sensor != floor {
-				fmt.Println("I am no longer stuck")
+			if (sensor != 0) && (sensor != floor) {
 				floor = sensor
 				motor.Stop()
 				lights.Set(config.INDICATE, floor)
-				order_handling.New_floor_reached(floor)
-				fmt.Printf("Arrived at %d \n", floor)
+				order_handling.Set_floor(floor)
 				state = "idle"
+
+				fmt.Println("I am no longer stuck")
+				fmt.Printf("Arrived at %d \n", floor)
 			}
 
 		case "":
@@ -188,7 +200,7 @@ func message_manager(id int, ordersTx chan<- network.Orders, ordersRx <-chan net
 		case b := <-ordersRx:
 			if b.From_id != id {
 				order_handling.Print_external_order_matrix(b.Orders)
-				order_handling.Merge_order_matrices(b.Orders)
+				order_handling.Merge_external_order_matrix_with_current(b.Orders)
 				var temp_internal_orders [4]int
 				for i := 0; i < config.NUMFLOORS; i++ {
 					temp_internal_orders[i] = b.Orders[i][0]
@@ -231,7 +243,7 @@ func message_manager(id int, ordersTx chan<- network.Orders, ordersRx <-chan net
 				} else if f.Type == network.ORDERS_RESPONSE_T {
 					orders_responseRx_out <- f.From_id
 				} else if f.Type == network.STUCK_SEND_T {
-					order_handling.Clear_orders_handled_by(f.From_id)
+					order_handling.Unassign_orders_handled_by(f.From_id)
 				}
 			}
 		}
@@ -331,8 +343,8 @@ func send_orders(id int, to_id int, orders [config.NUMFLOORS][config.NUMBUTTON_T
 		break
 	}
 	for {
-	_, not_empty := <-score_responseRx
-	if !not_empty {
+		_, not_empty := <-score_responseRx
+		if !not_empty {
 			break
 		}
 	}

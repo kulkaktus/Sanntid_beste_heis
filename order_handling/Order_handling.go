@@ -27,28 +27,18 @@ var self int
 
 func Init(self_id int) {
 	order_matrix = underlying_order_matrix[:][:]
-	for i := 0; i < config.NUMFLOORS; i++ {
-		for j := 0; j < config.NUMBUTTON_TYPES; j++ {
-			order_matrix[i][j] = -1
+	for floor_i := 0; floor_i < config.NUMFLOORS; floor_i++ {
+		for button_type_i := 0; button_type_i < config.NUMBUTTON_TYPES; button_type_i++ {
+			order_matrix[floor_i][button_type_j] = -1
 		}
 	}
+
 	self = self_id
 	last_floor = 2
 	direction = config.DOWN
 }
 
-func Merge_order_matrices(new_order_matrix [config.NUMFLOORS][config.NUMBUTTON_TYPES]int) {
-	for i := 0; i < config.NUMFLOORS; i++ {
-		for j := 1; j < config.NUMBUTTON_TYPES; j++ {
-			if order_matrix[i][j] < new_order_matrix[i][j] {
-				order_matrix[i][j] = new_order_matrix[i][j]
-			}
-		}
-	}
-}
-
 func Insert(destination int, button_type int, executer_id int) bool {
-
 	if Order_is_valid(destination, button_type) {
 		order_matrix[destination-1][button_type] = executer_id
 		return true
@@ -56,64 +46,31 @@ func Insert(destination int, button_type int, executer_id int) bool {
 	return false
 }
 
+func Clear_orders_in_floor(destination int) {
+	for button_type_i := 0; button_type_i < config.NUMBUTTON_TYPES; button_type_i++ {
+		if order_is_in_bounds(destination, button_type_i) {
+			order_matrix[destination-1][button_type_i] = NO_ORDER
+		}
+	}
+}
+
+func Clear_order_matrix() {
+	for floor_i := 1; floor_i <= config.NUMFLOORS; floor_i++ {
+		Clear_orders_in_floor(floor_i)
+	}
+}
+
 func Set_direction(new_direction int) {
 	direction = new_direction
 }
 
-func Print_order_matrix() {
-
-	for i := 0; i < config.NUMFLOORS; i++ {
-		for j := 0; j < 3; j++ {
-			str := ""
-			str += fmt.Sprintf("Floor: %d ", i+1)
-
-			if j == config.INTERNAL {
-				str += "INT  "
-			} else if j == config.UP {
-				str += "UP   "
-			} else {
-				str += "DOWN "
-			}
-			if underlying_order_matrix[i][j] == NO_EXECUTER {
-				str += "Order without executer\n"
-			} else if underlying_order_matrix[i][j] == NO_ORDER {
-				str += "No order\n"
-			} else {
-				str += fmt.Sprintf("%d\n", underlying_order_matrix[i][j])
-			}
-			fmt.Printf(str)
-		}
-	}
-}
-
-func Print_external_order_matrix(orders [config.NUMFLOORS][config.NUMBUTTON_TYPES]int) {
-
-	for i := 0; i < config.NUMFLOORS; i++ {
-		for j := 0; j < 3; j++ {
-			str := ""
-			str += fmt.Sprintf("Floor: %d ", i+1)
-
-			if j == config.INTERNAL {
-				str += "INT  "
-			} else if j == config.UP {
-				str += "UP   "
-			} else {
-				str += "DOWN "
-			}
-			if orders[i][j] == NO_EXECUTER {
-				str += "Order without executer\n"
-			} else if orders[i][j] == NO_ORDER {
-				str += "No order\n"
-			} else {
-				str += fmt.Sprintf("%d\n", orders[i][j])
-			}
-			fmt.Printf(str)
-		}
-	}
+func Set_floor(floor int) {
+	last_floor = floor
 }
 
 func Get_cost(destination int, button_type int) (cost int) {
 	var next_floor int
+
 	if State == "running" && direction == config.UP {
 		next_floor = last_floor + 1
 		if destination < next_floor {
@@ -124,19 +81,19 @@ func Get_cost(destination int, button_type int) (cost int) {
 		if destination > next_floor {
 			cost += config.DIRECTION_CHANGE_COST
 		}
+	} else if State == "idle" {
+		next_floor = last_floor
+		cost += config.STARTUP_FROM_IDLE_COST
 	} else if State == "stuck" {
 		next_floor = last_floor
 		cost += 10000
-	} else {
-		next_floor = last_floor
-		cost += config.STARTUP_FROM_IDLE_COST
 	}
-	cost += int(math.Abs(float64(destination - last_floor)))
+	cost += config.DISTANCE_COST * int(math.Abs(float64(destination-last_floor)))
+
 	return cost
 }
 
 func Get_next() (next_order_at_floor int) {
-
 	var iterator_dir int
 	var button_type_i int
 
@@ -158,6 +115,8 @@ func Get_next() (next_order_at_floor int) {
 		if order_matrix[floor_i-1][button_type_i] == self || order_matrix[floor_i-1][button_type_i] == NO_EXECUTER {
 			return floor_i
 		}
+	}
+	for floor_i := last_floor; floor_i != endpoints[1]+iterator_dir; floor_i += iterator_dir {
 		button_type_i = direction
 		if order_matrix[floor_i-1][button_type_i] == self || order_matrix[floor_i-1][button_type_i] == NO_EXECUTER {
 			return floor_i
@@ -199,40 +158,80 @@ func Get_next() (next_order_at_floor int) {
 	return 0
 }
 
-func New_floor_reached(floor int) bool {
-	last_floor = floor
-	if (order_matrix[floor-1][direction] == self) || (order_matrix[floor-1][config.INTERNAL] == self) {
-		return true
-	} else if order_matrix[floor-1][direction] == NO_EXECUTER {
-		return true
-	} else {
-		return false
-	}
-}
-
 func Get_order_matrix() [config.NUMFLOORS][config.NUMBUTTON_TYPES]int {
 	return underlying_order_matrix
 }
 
-func Clear_order(destination int) {
-	for button_type_i := 0; button_type_i < config.NUMBUTTON_TYPES; button_type_i++ {
-		if order_is_in_bounds(destination, button_type_i) {
-			order_matrix[destination-1][button_type_i] = NO_ORDER
+func Merge_external_order_matrix_with_current(new_order_matrix [config.NUMFLOORS][config.NUMBUTTON_TYPES]int) {
+	for floor_i := 0; floor_i < config.NUMFLOORS; floor_i++ {
+		for button_type_i := 1; button_type_i < config.NUMBUTTON_TYPES; button_type_i++ {
+			if order_matrix[floor_i][button_type_i] < new_order_matrix[floor_i][button_type_i] {
+				order_matrix[floor_i][button_type_i] = new_order_matrix[floor_i][button_type_i]
+			}
 		}
 	}
 }
 
-func Clear_order_matrix() {
-	for i := 1; i <= config.NUMFLOORS; i++ {
-		Clear_order(i)
+func Unassign_orders_handled_by(id_of_stuck_elevator int) {
+	for i := 0; i < config.NUMFLOORS; i++ {
+		for j := 1; j < config.NUMBUTTON_TYPES; j++ {
+			if order_matrix[i][j] == id_of_stuck_elevator {
+				order_matrix[i][j] = NO_EXECUTER
+			}
+		}
 	}
 }
 
-func Already_exists(destination int, button_type int) bool {
-	if order_matrix[destination-1][button_type] == NO_ORDER {
-		return false
+func Print_order_matrix() {
+	for i := 0; i < config.NUMFLOORS; i++ {
+		for j := 0; j < 3; j++ {
+			str := ""
+			str += fmt.Sprintf("Floor: %d ", i+1)
+
+			if j == config.INTERNAL {
+				str += "INT  "
+			} else if j == config.UP {
+				str += "UP   "
+			} else {
+				str += "DOWN "
+			}
+
+			if underlying_order_matrix[i][j] == NO_EXECUTER {
+				str += "Order without executer\n"
+			} else if underlying_order_matrix[i][j] == NO_ORDER {
+				str += "No order\n"
+			} else {
+				str += fmt.Sprintf("%d\n", underlying_order_matrix[i][j])
+			}
+			fmt.Printf(str)
+		}
 	}
-	return true
+}
+
+func Print_external_order_matrix(orders [config.NUMFLOORS][config.NUMBUTTON_TYPES]int) {
+	for i := 0; i < config.NUMFLOORS; i++ {
+		for j := 0; j < 3; j++ {
+			str := ""
+			str += fmt.Sprintf("Floor: %d ", i+1)
+
+			if j == config.INTERNAL {
+				str += "INT  "
+			} else if j == config.UP {
+				str += "UP   "
+			} else {
+				str += "DOWN "
+			}
+
+			if orders[i][j] == NO_EXECUTER {
+				str += "Order without executer\n"
+			} else if orders[i][j] == NO_ORDER {
+				str += "No order\n"
+			} else {
+				str += fmt.Sprintf("%d\n", orders[i][j])
+			}
+			fmt.Printf(str)
+		}
+	}
 }
 
 func Order_is_valid(destination int, button_type int) bool {
@@ -240,19 +239,13 @@ func Order_is_valid(destination int, button_type int) bool {
 	if (destination > config.NUMFLOORS) || (destination < 1) {
 		fmt.Printf("order_handling.FLOOR_ERROR, selected floor is %d, out of range\n", destination)
 		return false
-	}
-
-	if (button_type > config.NUMBUTTON_TYPES-1) || (button_type < 0) {
+	} else if (button_type > config.NUMBUTTON_TYPES-1) || (button_type < 0) {
 		fmt.Printf("order_handling.BUTTON_TYPE_ERROR:\nselected button type is %d, out of range\n", button_type)
 		return false
-	}
-
-	if (destination == config.NUMFLOORS) && (button_type == config.UP) {
+	} else if (destination == config.NUMFLOORS) && (button_type == config.UP) {
 		//fmt.Printf("order_handling.ORDER_ERROR\nInvalid order, requested floor: NUMFLOORS, UP\n")
 		return false
-	}
-
-	if (destination == 1) && (button_type == config.DOWN) {
+	} else if (destination == 1) && (button_type == config.DOWN) {
 		//fmt.Printf("order_handling.ORDER_ERROR\nInvalid order, requested floor: 1, DOWN\n")
 		return false
 	}
@@ -264,12 +257,9 @@ func order_is_in_bounds(destination int, button_type int) bool {
 	return destination <= config.NUMFLOORS && destination > 0 && button_type >= 0 && button_type < config.NUMBUTTON_TYPES
 }
 
-func Clear_orders_handled_by(id_of_stuck_elevator int) {
-	for i := 0; i < config.NUMFLOORS; i++ {
-		for j := 1; j < config.NUMBUTTON_TYPES; j++ {
-			if order_matrix[i][j] == id_of_stuck_elevator {
-				order_matrix[i][j] = NO_EXECUTER
-			}
-		}
+func Already_exists(destination int, button_type int) bool {
+	if order_matrix[destination-1][button_type] == NO_ORDER {
+		return false
 	}
+	return true
 }
